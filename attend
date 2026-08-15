@@ -1,0 +1,9760 @@
+<!DOCTYPE html>
+<html lang="ms">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>SATS - Sistem Kehadiran Murid</title>
+
+  <!-- QR SCANNER -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+
+  <style>
+
+    * {
+      box-sizing: border-box;
+    }
+
+
+    body {
+
+      margin: 0;
+
+      font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+      background: #f4f7fb;
+
+      color: #1f2937;
+
+    }
+
+
+    /* =========================================
+       HEADER
+       ========================================= */
+
+    .topbar {
+
+      background: white;
+
+      padding: 14px 20px;
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 14px;
+
+      box-shadow:
+        0 2px 10px
+        rgba(0,0,0,.08);
+
+      position: sticky;
+
+      top: 0;
+
+      z-index: 100;
+
+    }
+
+
+    .school-logo {
+
+      width: 50px;
+
+      height: 50px;
+
+      object-fit: contain;
+
+      display: none;
+
+    }
+
+
+    .school-name {
+
+      font-size: 22px;
+
+      font-weight: bold;
+
+    }
+
+
+    .system-name {
+
+      color: #6b7280;
+
+      font-size: 13px;
+
+      margin-top: 3px;
+
+    }
+
+
+    /* =========================================
+       NAVIGATION
+       ========================================= */
+
+    .nav {
+
+      background: white;
+
+      display: flex;
+
+      overflow-x: auto;
+
+      border-bottom:
+        1px solid #e5e7eb;
+
+    }
+
+
+    .nav button {
+
+      border: none;
+
+      background: transparent;
+
+      padding:
+        15px 20px;
+
+      font-size: 15px;
+
+      color: #6b7280;
+
+      cursor: pointer;
+
+      white-space: nowrap;
+
+    }
+
+
+    .nav button:hover {
+
+      background: #f9fafb;
+
+    }
+
+
+    .nav button.active {
+
+      color: #111827;
+
+      font-weight: bold;
+
+      border-bottom:
+        3px solid #111827;
+
+    }
+
+
+    /* =========================================
+       PAGES
+       ========================================= */
+
+    .page {
+
+      display: none;
+
+      max-width: 1000px;
+
+      margin: auto;
+
+      padding: 25px 20px;
+
+    }
+
+
+    .page.active {
+
+      display: block;
+
+    }
+
+
+    .page-title {
+
+      font-size: 28px;
+
+      font-weight: bold;
+
+      margin-bottom: 5px;
+
+    }
+
+
+    .page-subtitle {
+
+      color: #6b7280;
+
+      margin-bottom: 22px;
+
+    }
+
+
+    /* =========================================
+       CARDS
+       ========================================= */
+
+    .card {
+
+      background: white;
+
+      border-radius: 18px;
+
+      padding: 20px;
+
+      margin-bottom: 18px;
+
+      box-shadow:
+        0 5px 20px
+        rgba(0,0,0,.06);
+
+    }
+
+
+    /* =========================================
+       DASHBOARD
+       ========================================= */
+
+    .dashboard-grid {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(2, 1fr);
+
+      gap: 15px;
+
+    }
+
+
+    .stat {
+
+      background: white;
+
+      border-radius: 18px;
+
+      padding: 22px;
+
+      box-shadow:
+        0 5px 20px
+        rgba(0,0,0,.06);
+
+    }
+
+
+    .stat-label {
+
+      color: #6b7280;
+
+      font-size: 14px;
+
+    }
+
+
+    .stat-number {
+
+      font-size: 32px;
+
+      font-weight: bold;
+
+      margin-top: 8px;
+
+    }
+
+
+    /* =========================================
+       SCANNER
+       ========================================= */
+
+    #reader {
+
+      width: 100%;
+
+      max-width: 550px;
+
+      margin: auto;
+
+      overflow: hidden;
+
+      border-radius: 15px;
+
+    }
+
+
+    .scanner-status {
+
+      text-align: center;
+
+      color: #6b7280;
+
+      margin-top: 15px;
+
+    }
+
+
+    .scan-result {
+
+      display: none;
+
+      margin-top: 20px;
+
+      text-align: center;
+
+    }
+
+
+    .profile {
+
+      width: 130px;
+
+      height: 130px;
+
+      border-radius: 50%;
+
+      object-fit: cover;
+
+      margin: auto;
+
+      display: none;
+
+    }
+
+
+    .student-name {
+
+      font-size: 25px;
+
+      font-weight: bold;
+
+      margin-top: 12px;
+
+    }
+
+
+    .student-class {
+
+      color: #6b7280;
+
+      font-size: 17px;
+
+      margin-top: 5px;
+
+    }
+
+
+    .student-id {
+
+      color: #6b7280;
+
+      margin-top: 4px;
+
+    }
+
+
+    .attendance-status {
+
+      padding: 14px;
+
+      border-radius: 12px;
+
+      margin-top: 18px;
+
+      font-size: 19px;
+
+      font-weight: bold;
+
+    }
+
+
+    .success {
+
+      background: #dcfce7;
+
+      color: #166534;
+
+    }
+
+
+    .warning {
+
+      background: #fef3c7;
+
+      color: #92400e;
+
+    }
+
+
+    .error {
+
+      background: #fee2e2;
+
+      color: #991b1b;
+
+    }
+
+
+    .datetime {
+
+      color: #6b7280;
+
+      margin-top: 12px;
+
+    }
+
+
+    /* =========================================
+       FORMS
+       ========================================= */
+
+    .form-input {
+
+      width: 100%;
+
+      padding: 13px;
+
+      border:
+        1px solid #d1d5db;
+
+      border-radius: 10px;
+
+      margin-top: 10px;
+
+      font-size: 16px;
+
+      outline: none;
+
+    }
+
+
+    .form-input:focus {
+
+      border-color: #111827;
+
+    }
+
+
+    /* =========================================
+       BUTTONS
+       ========================================= */
+
+    .button {
+
+      width: 100%;
+
+      border: none;
+
+      border-radius: 11px;
+
+      padding: 14px;
+
+      font-size: 16px;
+
+      font-weight: bold;
+
+      cursor: pointer;
+
+      margin-top: 10px;
+
+    }
+
+
+    .button-dark {
+
+      background: #111827;
+
+      color: white;
+
+    }
+
+
+    .button-dark:hover {
+
+      background: #374151;
+
+    }
+
+
+    .button-light {
+
+      background: #e5e7eb;
+
+      color: #111827;
+
+    }
+
+
+
+    .student-toolbar {
+      display: grid;
+      grid-template-columns: 1fr 220px;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .student-toolbar .form-input {
+      margin-top: 10px;
+    }
+
+    .print-button {
+      width: 100%;
+      border: none;
+      border-radius: 11px;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      background: #111827;
+      color: white;
+    }
+
+    .print-button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    .print-selection {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+
+    
+    /* Compact student list */
+    .student-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      margin: 7px 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #fff;
+      min-height: 62px;
+      box-sizing: border-box;
+    }
+
+    .student-card-content {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .student-select-wrap {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .student-select {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      cursor: pointer;
+    }
+
+    .student-card-name {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .student-card-info {
+      display: inline-block;
+      margin-right: 10px;
+      margin-top: 3px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .student-qr {
+      width: 42px;
+      height: 42px;
+      flex: 0 0 42px;
+      object-fit: contain;
+    }
+
+    .student-actions {
+      flex: 0 0 auto;
+    }
+
+    .delete-button {
+      border: 0;
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 12px;
+      cursor: pointer;
+      background: #f3f4f6;
+    }
+
+    .student-print-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      flex-wrap: nowrap;
+    }
+
+    .student-print-actions .print-button {
+      flex: 1 1 0;
+      min-width: 0;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .student-print-actions #bulkPrintButton {
+      flex: 1.35 1 0;
+    }
+
+    @media (max-width: 600px) {
+      .student-print-actions {
+        gap: 6px;
+      }
+
+      .student-print-actions .print-button {
+        font-size: 11px;
+        padding: 9px 6px;
+      }
+    }
+
+    .edit-student-panel {
+      display: none;
+      margin-top: 10px;
+      padding: 14px;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      background: #f9fafb;
+    }
+
+    .edit-student-panel.active {
+      display: block;
+    }
+
+    .edit-student-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .edit-button {
+      border: 0;
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      background: #e5e7eb;
+    }
+
+    .edit-button.primary {
+      background: #111827;
+      color: #fff;
+    }
+
+    .student-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .print-student-card {
+      width: 54mm;
+      height: 86mm;
+      box-sizing: border-box;
+      border: 1.5px solid #1f2937;
+      border-radius: 4mm;
+      padding: 4mm;
+      background: #fff;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .print-card-school {
+      height: 12mm;
+      min-height: 12mm;
+      max-height: 12mm;
+      display: flex;
+      align-items: center;
+      gap: 4mm;
+      border-bottom: 1px solid #d1d5db;
+      padding-bottom: 2mm;
+      margin-bottom: 2mm;
+      overflow: hidden;
+    }
+
+    .print-card-school-logo {
+      width: 10mm;
+      height: 10mm;
+      min-width: 10mm;
+      max-width: 10mm;
+      min-height: 10mm;
+      max-height: 10mm;
+      object-fit: contain;
+      flex: 0 0 10mm;
+    }
+
+    .print-card-school-name {
+      flex: 1;
+      min-width: 0;
+      max-width: 58mm;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1.15;
+      max-height: 24px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      word-break: normal;
+      overflow-wrap: break-word;
+    }
+
+    .print-card-title {
+      font-size: 7px;
+      font-weight: 700;
+      letter-spacing: .6px;
+      margin-bottom: 1mm;
+    }
+
+    .print-card-body {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 4mm;
+      align-items: center;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .print-card-name {
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.12;
+      margin-bottom: 3mm;
+      max-height: 30px;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      text-transform: uppercase;
+    }
+
+    .print-card-row {
+      font-size: 8.5px;
+      line-height: 1.45;
+    }
+
+    .print-card-label {
+      font-weight: 700;
+    }
+
+    .print-card-qr {
+      width: 21mm;
+      height: 22mm;
+      min-width: 21mm;
+      min-height: 21mm;
+      object-fit: contain;
+      justify-self: center;
+    }
+
+    .print-card-footer {
+      border-top: 1px solid #d1d5db;
+      margin-top: 1mm;
+      padding-top: 1.5mm;
+      font-size: 6.5px;
+      text-align: center;
+    }
+
+    /* Center student information inside the portrait card */
+    .print-card-body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3mm;
+      flex: 1;
+      min-height: 0;
+      text-align: center;
+    }
+
+    .print-card-body > div {
+      width: 100%;
+      text-align: center;
+    }
+
+    .print-card-name {
+      width: 100%;
+      text-align: center;
+    }
+
+    .print-card-row {
+      text-align: center;
+    }
+
+    .print-card-qr {
+      align-self: center;
+      justify-self: center;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 8mm;
+      }
+
+      html,
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+
+      body * {
+        visibility: hidden !important;
+      }
+
+      #printArea,
+      #printArea * {
+        visibility: visible !important;
+      }
+
+      #printArea {
+        display: grid !important;
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        grid-template-columns: repeat(3, 54mm) !important;
+        gap: 5mm !important;
+        align-content: start !important;
+        background: #fff !important;
+      }
+
+      .print-student-card {
+        width: 54mm !important;
+        height: 86mm !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+    }
+
+
+    @media (max-width: 700px) {
+      #reports .card > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+      }
+    }
+
+
+    .report-filter-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .report-section-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .report-highlight-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .report-highlight-box {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px;
+      background: #f9fafb;
+    }
+
+    .report-highlight-box span {
+      display: block;
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .report-highlight-box strong {
+      font-size: 18px;
+    }
+
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .report-table th,
+    .report-table td {
+      padding: 9px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .report-table th {
+      font-weight: 700;
+    }
+
+    .class-comparison-bars {
+      margin-top: 18px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .class-bar-row {
+      display: grid;
+      grid-template-columns: 55px 1fr 55px;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .class-bar-track {
+      height: 10px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .class-bar-fill {
+      height: 100%;
+      background: #111827;
+      border-radius: 999px;
+    }
+
+    .report-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .report-summary-box {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 12px;
+      background: #f9fafb;
+    }
+
+    .report-summary-box span {
+      display: block;
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+
+    .report-summary-box strong {
+      font-size: 19px;
+    }
+
+    @media (max-width: 850px) {
+      .report-filter-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .report-summary-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .report-filter-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .report-summary-grid,
+      .report-highlight-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+
+    .report-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .report-section-subtitle {
+      color: #6b7280;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    @media (max-width: 650px) {
+      .report-section-header {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .report-section-header .print-button {
+        width: 100%;
+      }
+    }
+
+    @media print {
+
+      body {
+        background: #ffffff !important;
+      }
+
+      body * {
+        visibility: hidden !important;
+      }
+
+      #satsPrintReport,
+      #satsPrintReport * {
+        visibility: visible !important;
+      }
+
+      #satsPrintReport {
+        display: block !important;
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        padding: 18px;
+        box-sizing: border-box;
+        background: #ffffff;
+      }
+
+      @page {
+        size: A4 portrait;
+        margin: 12mm;
+      }
+
+      .sats-print-title {
+        text-align: center;
+        margin-bottom: 5px;
+      }
+
+      .sats-print-meta {
+        text-align: center;
+        font-size: 11px;
+        margin-bottom: 14px;
+      }
+
+      .sats-print-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10px;
+      }
+
+      .sats-print-table th,
+      .sats-print-table td {
+        border: 1px solid #333;
+        padding: 5px;
+      }
+
+      .sats-print-table th {
+        font-weight: 700;
+      }
+
+      .sats-print-table tr {
+        break-inside: avoid;
+      }
+    }
+
+    #satsPrintReport {
+      display: none;
+    }
+
+
+    @media print {
+      #satsPrintReport .sats-print-table {
+        page-break-inside: auto;
+      }
+
+      #satsPrintReport .sats-print-table thead {
+        display: table-header-group;
+      }
+
+      #satsPrintReport .sats-print-table tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+    }
+
+    /* =========================================
+       SCHOOL CALENDAR
+       ========================================= */
+    .calendar-toolbar { display:grid; grid-template-columns:1fr 1fr 1fr auto; gap:10px; align-items:end; }
+    .calendar-status-help { margin-top:10px; color:#6b7280; font-size:12px; line-height:1.5; }
+    .calendar-table { width:100%; border-collapse:collapse; }
+    .calendar-table th, .calendar-table td { padding:9px; border-bottom:1px solid #e5e7eb; text-align:left; white-space:nowrap; }
+    .calendar-table th { font-weight:700; }
+    .calendar-badge { display:inline-block; padding:5px 8px; border-radius:999px; font-size:12px; font-weight:700; }
+    .calendar-badge.schooling { background:#dcfce7; color:#166534; }
+    .calendar-badge.holiday { background:#fef3c7; color:#92400e; }
+    .calendar-badge.non-schooling { background:#fee2e2; color:#991b1b; }
+    .calendar-actions { display:flex; gap:6px; flex-wrap:nowrap; }
+    .calendar-action-button { border:0; border-radius:8px; padding:7px 9px; font-size:12px; cursor:pointer; background:#e5e7eb; }
+    .calendar-action-button.delete { background:#fee2e2; color:#991b1b; }
+    @media (max-width:850px) { .calendar-toolbar { grid-template-columns:1fr 1fr; } }
+    @media (max-width:560px) { .calendar-toolbar { grid-template-columns:1fr; } }
+
+
+    /* Keep every module page hidden unless it is the active page. */
+    .page:not(.active) {
+      display: none !important;
+    }
+
+</style>
+
+
+<style id="sats-teal-navy-theme">
+/* =========================================================
+   SATS UI THEME — TEAL + NAVY
+   Visual-only layer. Backend/functions are unchanged.
+   ========================================================= */
+
+:root {
+  --sats-navy: #0f2747;
+  --sats-navy-2: #173b63;
+  --sats-teal: #0f8b8d;
+  --sats-teal-dark: #087274;
+  --sats-teal-soft: #e7f7f6;
+  --sats-bg: #f3f8f8;
+  --sats-card: #ffffff;
+  --sats-text: #183047;
+  --sats-muted: #6b7c8f;
+  --sats-border: #d9e6e7;
+  --sats-shadow: 0 8px 24px rgba(15,39,71,.08);
+  --sats-radius: 16px;
+}
+
+/* Overall */
+body {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(15,139,141,.07), transparent 28%),
+    linear-gradient(180deg, #f7fbfb 0%, var(--sats-bg) 100%);
+  color: var(--sats-text);
+}
+
+/* Header */
+.topbar {
+  background:
+    linear-gradient(135deg, var(--sats-navy) 0%, var(--sats-navy-2) 72%, var(--sats-teal-dark) 100%);
+  color: #fff;
+  padding: 13px 22px;
+  box-shadow: 0 5px 20px rgba(15,39,71,.18);
+}
+
+.school-name {
+  color: #fff;
+  letter-spacing: .1px;
+}
+
+.system-name {
+  color: rgba(255,255,255,.75);
+}
+
+/* Navigation */
+.nav {
+  background: rgba(255,255,255,.97);
+  border-bottom: 1px solid var(--sats-border);
+  box-shadow: 0 2px 10px rgba(15,39,71,.05);
+  scrollbar-width: thin;
+}
+
+.nav button {
+  color: #5e7185;
+  padding: 13px 17px;
+  font-weight: 600;
+  border-bottom: 3px solid transparent;
+  transition: .18s ease;
+}
+
+.nav button:hover {
+  color: var(--sats-navy);
+  background: var(--sats-teal-soft);
+}
+
+.nav button.active {
+  color: var(--sats-teal-dark);
+  border-bottom-color: var(--sats-teal);
+  background: linear-gradient(180deg, #fff 0%, var(--sats-teal-soft) 100%);
+}
+
+/* Page headings */
+.page-title {
+  color: var(--sats-navy);
+  letter-spacing: -.3px;
+}
+
+.page-subtitle {
+  color: var(--sats-muted);
+}
+
+/* Cards */
+.card,
+.stat {
+  background: rgba(255,255,255,.96);
+  border: 1px solid rgba(217,230,231,.8);
+  border-radius: var(--sats-radius);
+  box-shadow: var(--sats-shadow);
+}
+
+.card:hover,
+.stat:hover {
+  border-color: #c9dfe0;
+}
+
+/* Dashboard stats */
+.stat-label {
+  color: var(--sats-muted);
+}
+
+.stat-number {
+  color: var(--sats-navy);
+}
+
+/* Scanner */
+#reader {
+  border: 4px solid rgba(15,139,141,.18);
+  box-shadow: 0 10px 30px rgba(15,39,71,.10);
+  background: #fff;
+}
+
+.scanner-status {
+  color: var(--sats-muted);
+}
+
+.student-name {
+  color: var(--sats-navy);
+}
+
+.student-class,
+.student-id,
+.datetime {
+  color: var(--sats-muted);
+}
+
+.attendance-status.success,
+.success {
+  background: #e2f7ee;
+  color: #08704f;
+  border: 1px solid #bfe8d7;
+}
+
+.attendance-status.warning,
+.warning {
+  background: #fff6d9;
+  color: #8a5b00;
+  border: 1px solid #f2df9e;
+}
+
+.attendance-status.error,
+.error {
+  background: #ffebeb;
+  color: #a12a2a;
+  border: 1px solid #f2caca;
+}
+
+/* Forms */
+.form-input {
+  border: 1px solid #cbdcde;
+  background: #fff;
+  color: var(--sats-text);
+}
+
+.form-input:hover {
+  border-color: #a9c6c8;
+}
+
+.form-input:focus {
+  border-color: var(--sats-teal);
+  box-shadow: 0 0 0 3px rgba(15,139,141,.12);
+}
+
+/* Main buttons */
+.button-dark,
+.print-button {
+  background: linear-gradient(135deg, var(--sats-navy), var(--sats-navy-2));
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(15,39,71,.16);
+}
+
+.button-dark:hover,
+.print-button:hover {
+  background: linear-gradient(135deg, #173b63, var(--sats-teal-dark));
+  transform: translateY(-1px);
+}
+
+.button-light {
+  background: #eaf2f3;
+  color: var(--sats-navy);
+}
+
+.button-light:hover {
+  background: #dcebec;
+}
+
+/* Student cards */
+.student-card {
+  border-color: var(--sats-border);
+  background: #fff;
+  transition: .16s ease;
+}
+
+.student-card:hover {
+  border-color: #b8d5d6;
+  box-shadow: 0 4px 14px rgba(15,39,71,.07);
+}
+
+.student-card-name {
+  color: var(--sats-navy);
+}
+
+.student-card-info {
+  color: var(--sats-muted);
+}
+
+.delete-button {
+  background: #edf3f4;
+  color: #496071;
+}
+
+.delete-button:hover {
+  background: #ffe8e8;
+  color: #9b2c2c;
+}
+
+.edit-student-panel {
+  border-color: var(--sats-border);
+  background: #f7fbfb;
+}
+
+.edit-button.primary {
+  background: var(--sats-teal);
+}
+
+.edit-button.primary:hover {
+  background: var(--sats-teal-dark);
+}
+
+/* Tables */
+.report-table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.report-table thead th {
+  background: var(--sats-navy) !important;
+  color: #fff !important;
+}
+
+.report-table tbody tr:nth-child(even) {
+  background: #f7fbfb;
+}
+
+.report-table tbody tr:hover {
+  background: var(--sats-teal-soft);
+}
+
+/* Calendar / action buttons */
+.calendar-action-button {
+  border: 1px solid #c9dfe0 !important;
+  background: #edf7f7 !important;
+  color: var(--sats-navy) !important;
+}
+
+.calendar-action-button:hover {
+  background: #d9eeee !important;
+}
+
+.calendar-action-button.delete {
+  background: #fff0f0 !important;
+  color: #9b2c2c !important;
+  border-color: #f0caca !important;
+}
+
+/* Risk emphasis */
+#riskSummary strong {
+  color: var(--sats-teal-dark);
+}
+
+/* Scanner auto-toast */
+#satsScannerToast {
+  border: 1px solid rgba(255,255,255,.65);
+  box-shadow: 0 12px 35px rgba(15,39,71,.20) !important;
+}
+
+/* Subtle focus accessibility */
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(15,139,141,.22);
+  outline-offset: 2px;
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+  .topbar {
+    padding: 11px 14px;
+  }
+
+  .school-name {
+    font-size: 19px;
+  }
+
+  .system-name {
+    font-size: 12px;
+  }
+
+  .nav button {
+    padding: 11px 13px;
+    font-size: 13px;
+  }
+
+  .page {
+    padding: 18px 12px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .card,
+  .stat {
+    border-radius: 14px;
+    padding: 16px;
+  }
+}
+</style>
+
+
+<style id="sats-red-menu">
+/* Menu theme — Red */
+.nav {
+  border-bottom-color: #ead1d1;
+}
+
+.nav button {
+  color: #6f6262;
+}
+
+.nav button:hover {
+  background: #fff1f1;
+  color: #9f1239;
+}
+
+.nav button.active {
+  color: #991b1b;
+  border-bottom-color: #dc2626;
+  background: linear-gradient(180deg, #ffffff 0%, #fff1f1 100%);
+}
+</style>
+
+
+<style id="sats-clean-menu-icons">
+.nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  letter-spacing: .05px;
+}
+
+.nav button::first-letter {
+  font-size: 18px;
+}
+
+@media (max-width: 700px) {
+  .nav button {
+    gap: 5px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+</style>
+
+
+<style id="sats-camera-switch-ui">
+.scanner-camera-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+  padding: 10px;
+  border: 1px solid #d9e6e7;
+  border-radius: 12px;
+  background: #f7fbfb;
+}
+
+.scanner-camera-label {
+  font-weight: 700;
+  color: #0f2747;
+}
+
+.scanner-camera-select {
+  min-width: 170px;
+  width: auto;
+}
+
+.scanner-switch-button {
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .scanner-camera-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scanner-camera-label {
+    text-align: left;
+  }
+
+  .scanner-camera-select,
+  .scanner-switch-button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+</style>
+
+
+<style id="sats-mobile-connection-ui">
+#satsConnectionStatus {
+  width: calc(100% - 24px);
+}
+
+@media (max-width: 700px) {
+  #satsConnectionStatus {
+    width: calc(100% - 20px);
+    font-size: 11px !important;
+    line-height: 1.35;
+  }
+}
+</style>
+
+</head>
+
+
+<body>
+
+<!-- SATS frontend: class dropdown + class filter + bulk QR printing -->
+
+
+
+<!-- =================================================
+     HEADER
+     ================================================= -->
+
+<div class="topbar">
+
+  <img
+    id="schoolLogo"
+    class="school-logo"
+    alt="Logo Sekolah"
+  >
+
+  <div>
+
+    <div
+      id="schoolName"
+      class="school-name"
+    >
+      SATS
+    </div>
+
+    <div class="system-name">
+      Sistem Kehadiran Murid
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =================================================
+     NAVIGATION
+     ================================================= -->
+
+<div class="nav">
+
+  <button
+    id="navDashboard"
+    class="active"
+    onclick="showPage('dashboard')"
+  >
+    ⌂ Utama
+  </button>
+
+
+  <button
+    id="navScanner"
+    onclick="showPage('scanner')"
+  >
+    ▣ Scan
+  </button>
+
+  <button
+    id="navManual"
+    onclick="showPage('manual')"
+  >
+    ✎ Manual
+  </button>
+
+
+  <button
+    id="navStudents"
+    onclick="showPage('students')"
+  >
+    ♙ Data Murid
+  </button>
+
+
+  <button
+    id="navReports"
+    onclick="showPage('reports')"
+  >
+    ▤ Laporan
+  </button>
+  <button
+    id="navCalendar"
+    onclick="showPage('calendar')"
+  >
+    ▦ Kalendar Sekolah
+  </button>
+
+<button
+    id="navSettings"
+    onclick="showPage('settings')"
+  >
+    ⚙ Tetapan
+  </button>
+
+</div>
+
+
+<!-- =================================================
+     DASHBOARD
+     ================================================= -->
+
+<section
+  id="dashboard"
+  class="page active"
+>
+
+  <div class="page-title">
+    Dashboard
+  </div>
+
+  <div class="page-subtitle">
+    Ringkasan kehadiran mengikut tarikh dan kelas
+  </div>
+
+  <div class="card">
+
+    <div class="report-filter-grid">
+
+      <div>
+        <label>Tarikh</label>
+        <input
+          id="dashboardDate"
+          type="date"
+          class="form-input"
+        >
+      </div>
+
+      <div>
+        <label>Kelas</label>
+        <select
+          id="dashboardClass"
+          class="form-input"
+        >
+          <option value="">Semua Kelas</option>
+        </select>
+      </div>
+
+      <div
+        style="display:flex;align-items:end;"
+      >
+        <button
+          type="button"
+          class="print-button"
+          style="margin:0;width:100%;"
+          onclick="loadDashboard()"
+        >
+          🔄 MUAT SEMULA
+        </button>
+      </div>
+
+    </div>
+
+    <div
+      id="dashboardCalendarStatus"
+      style="margin-top:12px;"
+    ></div>
+
+  </div>
+
+  <div class="dashboard-grid">
+
+    <div class="stat">
+      <div class="stat-label">
+        Jumlah Murid
+      </div>
+
+      <div
+        id="totalStudents"
+        class="stat-number"
+      >
+        -
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">
+        Hadir
+      </div>
+
+      <div
+        id="totalPresent"
+        class="stat-number"
+      >
+        -
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">
+        Tidak Hadir
+      </div>
+
+      <div
+        id="totalAbsent"
+        class="stat-number"
+      >
+        -
+      </div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-label">
+        Kehadiran
+      </div>
+
+      <div
+        id="attendancePercent"
+        class="stat-number"
+      >
+        -
+      </div>
+    </div>
+
+  </div>
+
+  <div
+    id="dashboardClassCard"
+    class="card"
+    style="margin-top:15px;"
+  >
+
+    <div class="report-section-header">
+
+      <div>
+        <div class="report-section-title">
+          📊 Ringkasan Mengikut Kelas
+        </div>
+
+        <div class="report-section-subtitle">
+          Perbandingan kehadiran bagi tarikh yang dipilih
+        </div>
+      </div>
+
+    </div>
+
+    <div style="overflow-x:auto;">
+
+      <table class="report-table">
+
+        <thead>
+          <tr>
+            <th>Bil</th>
+            <th>Kelas</th>
+            <th>Jumlah Murid</th>
+            <th>Hadir</th>
+            <th>Tidak Hadir</th>
+            <th>% Kehadiran</th>
+          </tr>
+        </thead>
+
+        <tbody id="dashboardClassBody">
+          <tr>
+            <td
+              colspan="6"
+              style="padding:15px;text-align:center;"
+            >
+              Memuatkan...
+            </td>
+          </tr>
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+
+<div id="dashboardRiskCard" class="card" style="margin-top:15px;">
+    <div class="report-section-header">
+      <div>
+        <div class="report-section-title">🚨 Murid Berisiko</div>
+        <div class="report-section-subtitle">
+          Murid dengan peratus kehadiran di bawah ambang yang dipilih.
+        </div>
+      </div>
+    </div>
+
+    <div class="report-filter-grid">
+      <div>
+        <label>Tarikh Mula</label>
+        <input id="riskStartDate" type="date" class="form-input">
+      </div>
+      <div>
+        <label>Tarikh Akhir</label>
+        <input id="riskEndDate" type="date" class="form-input">
+      </div>
+      <div>
+        <label>Kelas</label>
+        <select id="riskClass" class="form-input">
+          <option value="">Semua Kelas</option>
+        </select>
+      </div>
+      <div>
+        <label>Ambang Kehadiran</label>
+        <select id="riskThreshold" class="form-input">
+          <option value="90">Bawah 90%</option>
+          <option value="80" selected>Bawah 80%</option>
+          <option value="70">Bawah 70%</option>
+          <option value="60">Bawah 60%</option>
+          <option value="50">Bawah 50%</option>
+        </select>
+      </div>
+    </div>
+
+    <button type="button" class="print-button" style="margin-top:10px;"
+      onclick="loadAtRiskStudents()">
+      🚨 SEMAK MURID BERISIKO
+    </button>
+
+    <div id="riskSummary" style="margin-top:12px;"></div>
+
+    <div style="overflow-x:auto;margin-top:12px;">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Bil</th><th>Murid</th><th>Kelas</th>
+            <th>Hari Persekolahan</th><th>Hadir</th><th>Tidak Hadir</th>
+            <th>% Kehadiran</th><th>Status</th><th>Tindakan</th>
+          </tr>
+        </thead>
+        <tbody id="riskStudentsBody">
+          <tr><td colspan="9" style="padding:15px;text-align:center;">Belum disemak.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+
+  
+
+<!-- =================================================
+     SCANNER
+     ================================================= -->
+
+<section
+  id="scanner"
+  class="page"
+>
+
+  <div class="page-title">
+    Scan Kehadiran
+  </div>
+
+  <div class="page-subtitle">
+    Imbas QR Code murid
+  </div>
+
+
+  <div class="card">
+
+    <div
+      class="scanner-camera-controls"
+      aria-label="Pilihan kamera"
+    >
+      <label
+        for="cameraFacing"
+        class="scanner-camera-label"
+      >
+        📷 Kamera
+      </label>
+
+      <select
+        id="cameraFacing"
+        class="form-input scanner-camera-select"
+        onchange="changeScannerCamera(this.value)"
+      >
+        <option value="environment">
+          Kamera Belakang
+        </option>
+        <option value="user">
+          Kamera Depan
+        </option>
+      </select>
+
+      <button
+        type="button"
+        class="button button-light scanner-switch-button"
+        onclick="toggleScannerCamera()"
+      >
+        🔄 Tukar Kamera
+      </button>
+    </div>
+
+    <div id="reader"></div>
+
+
+    <div
+      id="scannerStatus"
+      class="scanner-status"
+    >
+      Sedia untuk mengimbas...
+    </div>
+
+
+    <div
+      id="scanResult"
+      class="scan-result"
+    >
+
+      <img
+        id="profile"
+        class="profile"
+        alt="Profile Murid"
+      >
+
+
+      <div
+        id="studentName"
+        class="student-name"
+      >
+      </div>
+
+
+      <div
+        id="studentClass"
+        class="student-class"
+      >
+      </div>
+
+
+      <div
+        id="studentId"
+        class="student-id"
+      >
+      </div>
+
+
+      <div
+        id="attendanceStatus"
+        class="attendance-status"
+      >
+      </div>
+
+
+      <div
+        id="datetime"
+        class="datetime"
+      >
+      </div>
+
+
+      <button
+        class="button button-dark"
+        onclick="restartScanner()"
+      >
+        📷 Scan Murid Seterusnya
+      </button>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =================================================
+     KEHADIRAN MANUAL
+     ================================================= -->
+
+<section
+  id="manual"
+  class="page"
+>
+
+  <div class="page-title">
+    ✍️ Kehadiran Manual
+  </div>
+
+  <div class="page-subtitle">
+    Ambil kehadiran tanpa QR dan simpan kaedah serta alasan ketidakhadiran.
+  </div>
+
+  <div class="card">
+
+    <div class="report-filter-grid">
+
+      <div>
+        <label>Tarikh</label>
+        <input
+          id="manualDate"
+          type="date"
+          class="form-input"
+        >
+      </div>
+
+      <div>
+        <label>Kelas</label>
+        <select
+          id="manualClass"
+          class="form-input"
+        >
+          <option value="">Pilih Kelas</option>
+        </select>
+      </div>
+
+      <div
+        style="display:flex;align-items:end;"
+      >
+        <button
+          type="button"
+          class="print-button"
+          style="margin:0;width:100%;"
+          onclick="loadManualAttendance()"
+        >
+          📋 PAPAR SENARAI MURID
+        </button>
+      </div>
+
+    </div>
+
+    <div
+      id="manualCalendarStatus"
+      style="margin-top:12px;"
+    ></div>
+
+  </div>
+
+  <div
+    id="manualAttendanceCard"
+    class="card"
+    style="display:none;margin-top:15px;"
+  >
+
+    <div class="report-section-header">
+
+      <div>
+        <div class="report-section-title">
+          📝 Ambil Kehadiran
+        </div>
+
+        <div class="report-section-subtitle">
+          Hijau = Hadir · Merah = Tidak Hadir · QR = rekod asal
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="print-button"
+        style="margin:0;"
+        onclick="saveManualAttendance()"
+      >
+        💾 SIMPAN KEHADIRAN
+      </button>
+
+    </div>
+
+    <div style="overflow-x:auto;">
+
+      <table class="report-table">
+
+        <thead>
+          <tr>
+            <th>Bil</th>
+            <th>Murid</th>
+            <th>Kelas</th>
+            <th>Status</th>
+            <th>Kaedah</th>
+            <th>Alasan Ketidakhadiran</th>
+            <th>Catatan</th>
+          </tr>
+        </thead>
+
+        <tbody id="manualAttendanceBody">
+          <tr>
+            <td colspan="7" style="padding:15px;text-align:center;">
+              Pilih tarikh dan kelas.
+            </td>
+          </tr>
+        </tbody>
+
+      </table>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+<!-- =================================================
+     DATA MURID
+     ================================================= -->
+
+<section
+  id="students"
+  class="page"
+>
+
+  <div class="page-title">
+    Data Murid
+  </div>
+
+  <div class="page-subtitle">
+    Pengurusan maklumat murid
+  </div>
+
+
+  <!-- ADD STUDENT -->
+
+  <div class="card">
+
+    <h3>
+      ➕ Tambah Murid
+    </h3>
+
+
+    <input
+      id="studentIdInput"
+      class="form-input"
+      placeholder="ID Murid"
+    >
+
+
+    <input
+      id="studentNameInput"
+      class="form-input"
+      placeholder="Nama Murid"
+    >
+
+
+    <select
+      id="studentClassInput"
+      class="form-input"
+    >
+      <option value="">Pilih Kelas</option>
+    </select>
+
+
+    <button
+      class="button button-dark"
+      onclick="addNewStudent()"
+    >
+      SIMPAN MURID
+    </button>
+
+  </div>
+
+
+  <!-- SEARCH -->
+
+  <div class="card">
+
+    <h3>
+      🔎 Cari Murid
+    </h3>
+
+
+    <div class="student-toolbar">
+
+      <div>
+        <input
+          id="studentSearch"
+          class="form-input"
+          placeholder="Cari ID atau nama..."
+          oninput="filterStudents()"
+        >
+      </div>
+
+      <div>
+        <select
+          id="studentClassFilter"
+          class="form-input"
+          onchange="filterStudents()"
+        >
+          <option value="">Semua Kelas</option>
+        </select>
+      </div>
+
+    </div>
+
+    <div class="print-selection" id="printSelectionText">
+      Pilih kelas atau cari murid, kemudian cetak.
+    </div>
+
+    <div class="student-print-actions">
+
+      <button
+        id="bulkPrintButton"
+        class="print-button"
+        onclick="printFilteredStudents()"
+        disabled
+      >
+        🖨️ CETAK QR MURID
+      </button>
+
+      <button
+        type="button"
+        class="print-button secondary-print-action"
+        onclick="selectAllFilteredStudents()"
+      >
+        ☑️ PILIH SEMUA
+      </button>
+
+      <button
+        type="button"
+        class="print-button secondary-print-action"
+        onclick="clearFilteredStudents()"
+      >
+        ☐ NYAH PILIH
+      </button>
+
+    </div>
+
+  </div>
+
+
+  
+<!-- PRINT AREA -->
+  <!-- EDIT STUDENT -->
+  <div id="editStudentPanel" class="card edit-student-panel">
+
+    <h3>✏️ Edit Murid</h3>
+
+    <input id="editStudentOriginalId" type="hidden">
+
+    <input
+      id="editStudentName"
+      class="form-input"
+      placeholder="Nama Murid"
+    >
+
+    <select
+      id="editStudentClass"
+      class="form-input"
+    >
+      <option value="">Pilih Kelas</option>
+    </select>
+
+    <div class="edit-student-actions">
+
+      <button
+        type="button"
+        class="edit-button primary"
+        onclick="saveEditedStudent()"
+      >
+        💾 Simpan Perubahan
+      </button>
+
+      <button
+        type="button"
+        class="edit-button"
+        onclick="cancelEditStudent()"
+      >
+        Batal
+      </button>
+
+    </div>
+
+  </div>
+
+  <div id="printArea" style="display:none;"></div>
+
+  <!-- STUDENT LIST -->
+
+  <div id="studentList">
+
+    <div class="loading">
+      Memuatkan data murid...
+    </div>
+
+  </div>
+
+</section>
+  <!-- SCHOOL CALENDAR PAGE -->
+  <section id="calendar" class="page">
+
+    <div class="page-title">📅 Kalendar Sekolah</div>
+    <div class="page-subtitle">
+      Tetapkan hari persekolahan dan pengecualian daripada jadual lalai.
+    </div>
+
+    <div class="card">
+      <h3 id="calendarFormTitle">➕ Tambah Pengecualian Kalendar</h3>
+
+      <input id="calendarRowNumber" type="hidden">
+
+      <div class="calendar-toolbar">
+        <div>
+          <label>Tarikh Mula</label>
+          <input id="calendarStartDate" type="date" class="form-input">
+        </div>
+
+        <div>
+          <label>Tarikh Akhir</label>
+          <input id="calendarEndDate" type="date" class="form-input">
+        </div>
+
+        <div>
+          <label>Status</label>
+          <select id="calendarStatus" class="form-input">
+            <option value="SCHOOLING">🟢 Hari Persekolahan</option>
+            <option value="HOLIDAY">🏖️ Cuti</option>
+            <option value="NON_SCHOOLING">🔴 Bukan Hari Persekolahan</option>
+          </select>
+        </div>
+
+        <button type="button" class="print-button" style="margin:0;" onclick="saveSchoolCalendarEntry()">
+          💾 SIMPAN
+        </button>
+      </div>
+
+      <input id="calendarDescription" class="form-input"
+        placeholder="Keterangan, contoh: Kelas Ganti Sabtu / Cuti Sekolah">
+
+      <div class="calendar-status-help">
+        <strong>Peraturan lalai:</strong>
+        Isnin–Jumaat = hari persekolahan. Sabtu–Ahad = bukan hari persekolahan.
+        Rekod di sini akan mengatasi peraturan lalai.
+      </div>
+
+      <button type="button" class="button button-light" onclick="cancelSchoolCalendarEdit()">
+        BATAL / KOSONGKAN
+      </button>
+    </div>
+
+    <div class="card">
+      <div class="report-section-header">
+        <div>
+          <div class="report-section-title">Senarai Pengecualian</div>
+          <div class="report-section-subtitle">
+            Kelas ganti pada Sabtu boleh ditetapkan sebagai Hari Persekolahan.
+          </div>
+        </div>
+        <button type="button" class="print-button" onclick="loadSchoolCalendar()">
+          🔄 MUAT SEMULA
+        </button>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="calendar-table">
+          <thead>
+            <tr>
+              <th>Tarikh Mula</th>
+              <th>Tarikh Akhir</th>
+              <th>Status</th>
+              <th>Keterangan</th>
+              <th>Tindakan</th>
+            </tr>
+          </thead>
+          <tbody id="schoolCalendarBody">
+            <tr>
+              <td colspan="5" style="padding:15px;text-align:center;">Memuatkan kalendar...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+
+
+
+  <!-- SETTINGS PAGE -->
+  <section id="settings" class="page">
+
+    <div class="card">
+      <h2>⚙️ Tetapan Sekolah</h2>
+
+      <label>Nama Sekolah</label>
+      <input
+        id="schoolNameSetting"
+        class="form-input"
+        placeholder="Nama sekolah"
+      >
+      <button
+        class="print-button"
+        style="margin-top:10px;"
+        onclick="saveSchoolNameSetting()"
+      >
+        💾 Simpan Nama Sekolah
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>🖼️ Logo Sekolah</h2>
+
+      <p style="color:#6b7280;">
+        Pilih logo sekolah dari komputer anda. Logo akan dikecilkan
+        secara automatik supaya sesuai disimpan dalam sistem SATS.
+      </p>
+
+      <input
+        id="schoolLogoFile"
+        class="form-input"
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        onchange="previewSchoolLogoFile(this)"
+      >
+
+      <input
+        id="schoolLogoSetting"
+        type="hidden"
+      >
+
+      <div style="margin-top:12px;">
+        <img
+          id="schoolLogoPreview"
+          alt="Logo Sekolah"
+          style="max-width:140px;max-height:140px;display:none;object-fit:contain;"
+        >
+      </div>
+
+      <button
+        class="print-button"
+        style="margin-top:10px;"
+        onclick="uploadSchoolLogo()"
+      >
+        🖼️ Upload & Simpan Logo
+      </button>
+    </div>
+
+    <div class="card">
+      <h2>👩‍🏫 Senarai Kelas</h2>
+
+      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;">
+        <input
+          id="newClassSetting"
+          class="form-input"
+          placeholder="Contoh: 5A"
+        >
+
+        <button
+          class="print-button"
+          onclick="addClassSetting()"
+        >
+          ➕ Tambah
+        </button>
+      </div>
+
+      <div
+        id="settingsClassList"
+        style="margin-top:15px;"
+      ></div>
+    </div>
+
+  </section>
+
+
+
+<!-- =================================================
+     REPORTS
+     ================================================= -->
+
+<section
+  id="reports"
+  class="page"
+>
+
+  <div class="page-title">
+    Laporan Kehadiran
+  </div>
+
+  <div class="page-subtitle">
+    Analisis kehadiran mengikut tempoh, kelas dan murid
+  </div>
+
+  <div class="card">
+
+    <div
+      class="report-filter-grid"
+    >
+
+      <div>
+        <label>Dari Tarikh</label>
+        <input
+          id="reportStartDate"
+          type="date"
+          class="form-input"
+        >
+      </div>
+
+      <div>
+        <label>Hingga Tarikh</label>
+        <input
+          id="reportEndDate"
+          type="date"
+          class="form-input"
+        >
+      </div>
+
+      <div>
+        <label>Kelas</label>
+        <select
+          id="reportClass"
+          class="form-input"
+        >
+          <option value="">Semua Kelas</option>
+        </select>
+      </div>
+
+      <div
+        style="display:flex;align-items:end;"
+      >
+        <button
+          class="print-button"
+          style="margin:0;width:100%;"
+          onclick="loadAttendanceAnalysis()"
+        >
+          🔎 PAPAR ANALISIS
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- CLASS ANALYSIS -->
+
+  <div
+    id="classAnalysisCard"
+    class="card"
+    style="display:none;margin-top:15px;"
+  >
+
+    <div
+      class="report-section-header"
+    >
+      <div>
+        <div class="report-section-title">
+          📊 Analisis Mengikut Kelas
+        </div>
+        <div class="report-section-subtitle">
+          Perbandingan kehadiran setiap kelas bagi tempoh yang dipilih
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="print-button"
+        onclick="cetakPerbandinganKelas()"
+      >
+        🖨️ CETAK LAPORAN KELAS
+      </button>
+    </div>
+
+    <div
+      id="classHighlights"
+      class="report-highlight-grid"
+    ></div>
+
+    <div style="overflow-x:auto;">
+
+      <table
+        class="report-table"
+      >
+
+        <thead>
+          <tr>
+            <th>Bil</th>
+            <th>Kelas</th>
+            <th>Jumlah Murid</th>
+            <th>Hari Sekolah</th>
+            <th>Jumlah Hadir</th>
+            <th>Jumlah Tidak Hadir</th>
+            <th>% Kehadiran</th>
+          </tr>
+        </thead>
+
+        <tbody
+          id="classAnalysisBody"
+        ></tbody>
+
+      </table>
+
+    </div>
+
+    <div
+      id="classComparisonBars"
+      class="class-comparison-bars"
+    ></div>
+
+  </div>
+
+
+  <!-- INDIVIDUAL ANALYSIS -->
+
+  <div
+    id="individualAnalysisCard"
+    class="card"
+    style="display:none;margin-top:15px;"
+  >
+
+    <div class="report-section-header">
+      <div>
+        <div class="report-section-title">
+          👤 Analisis Individu
+        </div>
+        <div
+          id="individualAnalysisPeriod"
+          class="report-section-subtitle"
+        ></div>
+      </div>
+
+      <button
+        type="button"
+        class="print-button"
+        onclick="cetakLaporanIndividu()"
+      >
+        🖨️ CETAK LAPORAN INDIVIDU
+      </button>
+    </div>
+
+    <div
+      class="report-filter-grid"
+      style="grid-template-columns:1fr;"
+    >
+      <div>
+        <label>Pilih Kelas</label>
+        <select
+          id="individualClass"
+          class="form-input"
+          onchange="renderIndividualClassAnalysis()"
+        >
+          <option value="">Pilih Kelas</option>
+        </select>
+      </div>
+    </div>
+
+    <div
+      id="individualSummary"
+      class="report-summary-grid"
+      style="display:none;"
+    >
+      <div class="report-summary-box">
+        <span>Jumlah Murid</span>
+        <strong id="individualTotalStudents">0</strong>
+      </div>
+
+      <div class="report-summary-box">
+        <span>Hari Sekolah</span>
+        <strong id="individualSchoolDays">0</strong>
+      </div>
+
+      <div class="report-summary-box">
+        <span>Jumlah Hadir</span>
+        <strong id="individualPresent">0</strong>
+      </div>
+
+      <div class="report-summary-box">
+        <span>Purata Kehadiran</span>
+        <strong id="individualPercentage">0%</strong>
+      </div>
+    </div>
+
+    <div
+      id="individualTableWrap"
+      style="display:none;overflow-x:auto;margin-top:15px;"
+    >
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Bil</th>
+            <th>Nama Murid</th>
+            <th>ID</th>
+            <th>Kelas</th>
+            <th>Hari Sekolah</th>
+            <th>Hadir</th>
+            <th>Tidak Hadir</th>
+            <th>% Kehadiran</th>
+          </tr>
+        </thead>
+
+        <tbody id="individualAnalysisBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+
+</section>
+
+
+<script>
+
+/* =================================================
+   SATS API
+   ================================================= */
+
+const SATS_API =
+  "https://script.google.com/macros/s/AKfycbyqpS875bLVdCzl7FSDntE-AMxIq7hmoZDJJBSFimPGiQib17dqpgKmyA10Wwo8hn3W/exec";
+
+
+/* =================================================
+   GLOBAL VARIABLES
+   ================================================= */
+
+let scanner = null;
+
+let scannerRunning = false;
+
+let processingScan = false;
+
+let allStudents = [];
+let allClasses = [];
+let selectedStudentIds = new Set();
+
+
+/* =================================================
+   PAGE NAVIGATION
+   ================================================= */
+
+function showPage(pageName) {
+
+  document
+    .querySelectorAll(".page")
+    .forEach(function(page) {
+      page.classList.remove("active");
+    });
+
+  const target = document.getElementById(pageName);
+
+  if (!target) {
+    console.warn("Page tidak dijumpai:", pageName);
+    return;
+  }
+
+  target.classList.add("active");
+
+  document
+    .querySelectorAll(".nav button")
+    .forEach(function(button) {
+      button.classList.remove("active");
+    });
+
+  if (pageName === "dashboard") {
+
+    document
+      .getElementById("navDashboard")
+      .classList.add("active");
+
+    stopScanner();
+    loadDashboard();
+
+  }
+
+  if (pageName === "scanner") {
+
+    document
+      .getElementById("navScanner")
+      .classList.add("active");
+
+    startScanner();
+
+  }
+
+  if (pageName === "manual") {
+
+    document
+      .getElementById("navManual")
+      .classList.add("active");
+
+    stopScanner();
+    prepareManualAttendancePage();
+
+  }
+
+  if (pageName === "students") {
+
+    document
+      .getElementById("navStudents")
+      .classList.add("active");
+
+    stopScanner();
+
+    loadClasses();
+    loadStudents();
+
+  }
+
+  if (pageName === "reports") {
+
+    document
+      .getElementById("navReports")
+      .classList.add("active");
+
+    stopScanner();
+    prepareReportAnalysisPage();
+
+  }
+  if (pageName === "calendar") {
+
+    document
+      .getElementById("navCalendar")
+      .classList.add("active");
+
+    stopScanner();
+    loadSchoolCalendar();
+
+  }
+
+
+
+  if (pageName === "settings") {
+
+    document
+      .getElementById("navSettings")
+      .classList.add("active");
+
+    stopScanner();
+    loadSchoolSettings();
+
+  }
+
+}
+
+
+/* =================================================
+   ATTENDANCE REPORT
+   ================================================= */
+
+function prepareReportAnalysisPage() {
+
+  const startInput =
+    document.getElementById(
+      "reportStartDate"
+    );
+
+  const endInput =
+    document.getElementById(
+      "reportEndDate"
+    );
+
+  if (startInput && !startInput.value) {
+
+    const now = new Date();
+
+    const today =
+      now.getFullYear() +
+      "-" +
+      String(
+        now.getMonth() + 1
+      ).padStart(2, "0") +
+      "-" +
+      String(
+        now.getDate()
+      ).padStart(2, "0");
+
+    startInput.value =
+      today;
+
+  }
+
+  if (endInput && !endInput.value) {
+
+    endInput.value =
+      startInput
+        ? startInput.value
+        : "";
+
+  }
+
+  if (!allClasses.length) {
+    loadClasses(function() {
+      populateReportClasses();
+    });
+  } else {
+    populateReportClasses();
+  }
+}
+
+
+function populateReportClasses() {
+
+  const selects = [
+    document.getElementById(
+      "reportClass"
+    ),
+    document.getElementById(
+      "individualClass"
+    )
+  ];
+
+  selects.forEach(
+    function(select) {
+
+      if (!select) return;
+
+      const current =
+        select.value;
+
+      const first =
+        select.id ===
+          "reportClass"
+          ? '<option value="">Semua Kelas</option>'
+          : '<option value="">Pilih Kelas</option>';
+
+      select.innerHTML =
+        first +
+        allClasses.map(
+          function(className) {
+
+            return (
+              '<option value="' +
+              escapeAttribute(
+                className
+              ) +
+              '">' +
+              escapeHtml(
+                className
+              ) +
+              '</option>'
+            );
+
+          }
+        ).join("");
+
+      if (current) {
+        select.value =
+          current;
+      }
+
+    }
+  );
+
+}
+
+
+function loadAttendanceAnalysis() {
+
+  const startDate =
+    document.getElementById(
+      "reportStartDate"
+    ).value;
+
+  const endDate =
+    document.getElementById(
+      "reportEndDate"
+    ).value;
+
+  const className =
+    document.getElementById(
+      "reportClass"
+    ).value;
+
+  if (!startDate || !endDate) {
+
+    alert(
+      "Sila pilih tarikh mula dan tarikh akhir."
+    );
+
+    return;
+  }
+
+  if (startDate > endDate) {
+
+    alert(
+      "Tarikh mula tidak boleh melebihi tarikh akhir."
+    );
+
+    return;
+  }
+
+  const classCard =
+    document.getElementById(
+      "classAnalysisCard"
+    );
+
+  const individualCard =
+    document.getElementById(
+      "individualAnalysisCard"
+    );
+
+  classCard.style.display =
+    "block";
+
+  individualCard.style.display =
+    "block";
+
+  document.getElementById(
+    "classAnalysisBody"
+  ).innerHTML =
+    '<tr><td colspan="7" style="padding:15px;text-align:center;">Memuatkan analisis...</td></tr>';
+
+  document.getElementById(
+    "classHighlights"
+  ).innerHTML = "";
+
+  document.getElementById(
+    "classComparisonBars"
+  ).innerHTML = "";
+
+  const url =
+    SATS_API +
+    "?action=getAttendanceAnalysis" +
+    "&startDate=" +
+    encodeURIComponent(
+      startDate
+    ) +
+    "&endDate=" +
+    encodeURIComponent(
+      endDate
+    ) +
+    "&className=" +
+    encodeURIComponent(
+      className
+    );
+
+  callSATS(
+    url,
+    function(data) {
+
+      if (
+        !data ||
+        !data.success
+      ) {
+
+        alert(
+          (data &&
+            data.message) ||
+          "Ralat mendapatkan analisis kehadiran."
+        );
+
+        return;
+      }
+
+      window.currentAttendanceAnalysis =
+        data;
+
+      renderClassAnalysis(
+        data
+      );
+
+      populateIndividualClassesFromAnalysis(
+        data
+      );
+
+    }
+  );
+}
+
+
+function renderClassAnalysis(
+  data
+) {
+
+  const rows =
+    data.classes ||
+    [];
+
+  const body =
+    document.getElementById(
+      "classAnalysisBody"
+    );
+
+  if (!rows.length) {
+
+    body.innerHTML =
+      '<tr><td colspan="7" style="padding:15px;text-align:center;">Tiada data murid untuk tempoh ini.</td></tr>';
+
+    return;
+  }
+
+  const highest =
+    rows.reduce(
+      function(best, row) {
+        return row.percentage >
+          best.percentage
+          ? row
+          : best;
+      },
+      rows[0]
+    );
+
+  const lowest =
+    rows.reduce(
+      function(best, row) {
+        return row.percentage <
+          best.percentage
+          ? row
+          : best;
+      },
+      rows[0]
+    );
+
+  const totalPresent =
+    rows.reduce(
+      function(sum, row) {
+        return sum +
+          Number(
+            row.present || 0
+          );
+      },
+      0
+    );
+
+  const totalPossible =
+    rows.reduce(
+      function(sum, row) {
+        return sum +
+          Number(
+            row.possible || 0
+          );
+      },
+      0
+    );
+
+  const overall =
+    totalPossible
+      ? Math.round(
+          (
+            totalPresent /
+            totalPossible
+          ) *
+          10000
+        ) / 100
+      : 0;
+
+  document.getElementById(
+    "classHighlights"
+  ).innerHTML =
+
+    '<div class="report-highlight-box">' +
+      '<span>Kehadiran Keseluruhan</span>' +
+      '<strong>' +
+        overall +
+        '%' +
+      '</strong>' +
+    '</div>' +
+
+    '<div class="report-highlight-box">' +
+      '<span>Kelas Tertinggi</span>' +
+      '<strong>' +
+        escapeHtml(
+          highest.className
+        ) +
+        ' — ' +
+        highest.percentage +
+        '%' +
+      '</strong>' +
+    '</div>' +
+
+    '<div class="report-highlight-box">' +
+      '<span>Kelas Terendah</span>' +
+      '<strong>' +
+        escapeHtml(
+          lowest.className
+        ) +
+        ' — ' +
+        lowest.percentage +
+        '%' +
+      '</strong>' +
+    '</div>' +
+
+    '<div class="report-highlight-box">' +
+      '<span>Tempoh</span>' +
+      '<strong>' +
+        formatReportDate(
+          data.startDate
+        ) +
+        ' – ' +
+        formatReportDate(
+          data.endDate
+        ) +
+      '</strong>' +
+    '</div>';
+
+  body.innerHTML =
+    rows.map(
+      function(row, index) {
+
+        return (
+          "<tr>" +
+
+            "<td>" +
+              (index + 1) +
+            "</td>" +
+
+            "<td>" +
+              escapeHtml(
+                row.className
+              ) +
+            "</td>" +
+
+            "<td>" +
+              row.studentCount +
+            "</td>" +
+
+            "<td>" +
+              row.schoolDays +
+            "</td>" +
+
+            "<td>" +
+              row.present +
+            "</td>" +
+
+            "<td>" +
+              row.absent +
+            "</td>" +
+
+            "<td style='font-weight:700;'>" +
+              row.percentage +
+              "%" +
+            "</td>" +
+
+          "</tr>"
+        );
+
+      }
+    ).join("");
+
+  const bars =
+    document.getElementById(
+      "classComparisonBars"
+    );
+
+  const sorted =
+    rows.slice().sort(
+      function(a, b) {
+        return (
+          Number(b.percentage) -
+          Number(a.percentage)
+        );
+      }
+    );
+
+  bars.innerHTML =
+    sorted.map(
+      function(row) {
+
+        return (
+          '<div class="class-bar-row">' +
+
+            '<strong>' +
+              escapeHtml(
+                row.className
+              ) +
+            '</strong>' +
+
+            '<div class="class-bar-track">' +
+              '<div class="class-bar-fill" style="width:' +
+                Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    Number(
+                      row.percentage
+                    )
+                  )
+                ) +
+                '%;"></div>' +
+            '</div>' +
+
+            '<span>' +
+              row.percentage +
+              '%' +
+            '</span>' +
+
+          '</div>'
+        );
+
+      }
+    ).join("");
+}
+
+
+function populateIndividualClassesFromAnalysis(data) {
+
+  const select =
+    document.getElementById(
+      "individualClass"
+    );
+
+  if (!select) return;
+
+  const rows =
+    Array.isArray(data.classes)
+      ? data.classes
+      : [];
+
+  const classNames =
+    rows
+      .map(function(row) {
+        return String(
+          row.className || ""
+        ).trim();
+      })
+      .filter(function(name) {
+        return !!name;
+      })
+      .sort(function(a, b) {
+        return a.localeCompare(
+          b,
+          undefined,
+          {
+            numeric: true,
+            sensitivity: "base"
+          }
+        );
+      });
+
+  select.innerHTML =
+    '<option value="">Pilih Kelas</option>' +
+    classNames.map(function(className) {
+      return (
+        '<option value="' +
+        escapeAttribute(className) +
+        '">' +
+        escapeHtml(className) +
+        '</option>'
+      );
+    }).join("");
+
+  document.getElementById(
+    "individualSummary"
+  ).style.display = "none";
+
+  document.getElementById(
+    "individualTableWrap"
+  ).style.display = "none";
+}
+
+
+function populateIndividualStudents() {
+  return;
+}
+
+
+function renderIndividualAnalysis() {
+  renderIndividualClassAnalysis();
+}
+
+
+function renderIndividualClassAnalysis() {
+
+  const data =
+    window.currentAttendanceAnalysis;
+
+  const className =
+    document.getElementById(
+      "individualClass"
+    ).value;
+
+  const summary =
+    document.getElementById(
+      "individualSummary"
+    );
+
+  const tableWrap =
+    document.getElementById(
+      "individualTableWrap"
+    );
+
+  const body =
+    document.getElementById(
+      "individualAnalysisBody"
+    );
+
+  if (!data || !className) {
+
+    summary.style.display = "none";
+    tableWrap.style.display = "none";
+    body.innerHTML = "";
+    return;
+  }
+
+  const students =
+    (Array.isArray(data.students)
+      ? data.students
+      : []
+    ).filter(function(student) {
+
+      return (
+        normalizeText(
+          student.className
+        ) ===
+        normalizeText(
+          className
+        )
+      );
+
+    }).sort(function(a, b) {
+
+      return String(
+        a.name || ""
+      ).localeCompare(
+        String(
+          b.name || ""
+        ),
+        undefined,
+        {
+          sensitivity: "base"
+        }
+      );
+
+    });
+
+  if (!students.length) {
+
+    summary.style.display = "none";
+    tableWrap.style.display = "block";
+
+    body.innerHTML =
+      '<tr><td colspan="9" style="padding:15px;text-align:center;">Tiada murid bagi kelas ini.</td></tr>';
+
+    return;
+  }
+
+  body.innerHTML =
+    students.map(function(student, index) {
+
+      return (
+        "<tr>" +
+          "<td>" +
+            (index + 1) +
+          "</td>" +
+
+          "<td style='font-weight:600;'>" +
+            escapeHtml(
+              student.name || ""
+            ) +
+          "</td>" +
+
+          "<td>" +
+            escapeHtml(
+              student.id || ""
+            ) +
+          "</td>" +
+
+          "<td>" +
+            escapeHtml(
+              student.className || ""
+            ) +
+          "</td>" +
+
+          "<td>" +
+            Number(
+              student.schoolDays || 0
+            ) +
+          "</td>" +
+
+          "<td>" +
+            Number(
+              student.present || 0
+            ) +
+          "</td>" +
+
+          "<td>" +
+            Number(
+              student.absent || 0
+            ) +
+          "</td>" +
+
+          "<td style='font-weight:700;'>" +
+            Number(
+              student.percentage || 0
+            ) +
+            "%" +
+          "</td>" +
+        "</tr>"
+      );
+
+    }).join("");
+
+  const totalPresent =
+    students.reduce(
+      function(sum, student) {
+        return sum +
+          Number(
+            student.present || 0
+          );
+      },
+      0
+    );
+
+  const totalPossible =
+    students.reduce(
+      function(sum, student) {
+        return sum +
+          Number(
+            student.schoolDays || 0
+          );
+      },
+      0
+    );
+
+  const average =
+    totalPossible
+      ? Math.round(
+          (
+            totalPresent /
+            totalPossible
+          ) *
+          10000
+        ) / 100
+      : 0;
+
+  document.getElementById(
+    "individualTotalStudents"
+  ).innerText =
+    students.length;
+
+  document.getElementById(
+    "individualSchoolDays"
+  ).innerText =
+    Number(
+      data.schoolDays || 0
+    );
+
+  document.getElementById(
+    "individualPresent"
+  ).innerText =
+    totalPresent;
+
+  document.getElementById(
+    "individualPercentage"
+  ).innerText =
+    average + "%";
+
+  const period =
+    document.getElementById(
+      "individualAnalysisPeriod"
+    );
+
+  if (period) {
+
+    period.innerText =
+      "Tempoh: " +
+      formatReportDate(
+        data.startDate
+      ) +
+      " – " +
+      formatReportDate(
+        data.endDate
+      ) +
+      " | Kelas: " +
+      className;
+
+  }
+
+  summary.style.display = "grid";
+  tableWrap.style.display = "block";
+}
+
+
+function getIndividualClassStudents() {
+
+  const data =
+    window.currentAttendanceAnalysis;
+
+  const className =
+    document.getElementById(
+      "individualClass"
+    ).value;
+
+  if (!data || !className) {
+    return [];
+  }
+
+  return (
+    Array.isArray(data.students)
+      ? data.students
+      : []
+  ).filter(function(student) {
+
+    return (
+      normalizeText(
+        student.className
+      ) ===
+      normalizeText(
+        className
+      )
+    );
+
+  }).sort(function(a, b) {
+
+    return String(
+      a.name || ""
+    ).localeCompare(
+      String(
+        b.name || ""
+      ),
+      undefined,
+      {
+        sensitivity: "base"
+      }
+    );
+
+  });
+}
+
+
+function buildPrintTableRows(students) {
+
+  return students.map(function(student, index) {
+
+    return (
+      "<tr>" +
+        "<td>" +
+          (index + 1) +
+        "</td>" +
+        "<td>" +
+          escapeHtml(student.name || "") +
+        "</td>" +
+        "<td>" +
+          escapeHtml(student.id || "") +
+        "</td>" +
+        "<td>" +
+          escapeHtml(student.className || "") +
+        "</td>" +
+        "<td>" +
+          Number(student.schoolDays || 0) +
+        "</td>" +
+        "<td>" +
+          Number(student.present || 0) +
+        "</td>" +
+        "<td>" +
+          Number(student.absent || 0) +
+        "</td>" +
+        "<td>" +
+          Number(student.percentage || 0) +
+          "%" +
+        "</td>" +
+      "</tr>"
+    );
+
+  }).join("");
+}
+
+
+function preparePrintRoot(
+  title,
+  subtitle,
+  students
+) {
+
+  let printRoot =
+    document.getElementById(
+      "satsPrintReport"
+    );
+
+  if (!printRoot) {
+
+    printRoot =
+      document.createElement(
+        "div"
+      );
+
+    printRoot.id =
+      "satsPrintReport";
+
+    document.body.appendChild(
+      printRoot
+    );
+
+  }
+
+  const schoolName =
+    getCurrentSchoolNameForPrint();
+
+  const logo =
+    getCurrentSchoolLogoForPrint();
+
+  let logoHtml = "";
+
+  if (logo) {
+
+    logoHtml =
+      '<img src="' +
+      escapeAttribute(logo) +
+      '" style="max-height:65px;max-width:100px;object-fit:contain;margin-bottom:6px;">';
+
+  }
+
+  printRoot.innerHTML =
+
+    '<div class="sats-print-title">' +
+      logoHtml +
+
+      '<div style="font-size:17px;font-weight:700;">' +
+        escapeHtml(schoolName) +
+      '</div>' +
+
+      '<div style="font-size:15px;font-weight:700;margin-top:3px;">' +
+        escapeHtml(title) +
+      '</div>' +
+    '</div>' +
+
+    '<div class="sats-print-meta">' +
+      escapeHtml(subtitle) +
+    '</div>' +
+
+    '<table class="sats-print-table">' +
+
+      '<thead>' +
+        '<tr>' +
+          '<th>Bil</th>' +
+          '<th>Nama Murid</th>' +
+          '<th>ID</th>' +
+          '<th>Kelas</th>' +
+          '<th>Hari Sekolah</th>' +
+          '<th>Hadir</th>' +
+          '<th>Tidak Hadir</th>' +
+          '<th>% Kehadiran</th>' +
+        '</tr>' +
+      '</thead>' +
+
+      '<tbody>' +
+        buildPrintTableRows(students) +
+      '</tbody>' +
+
+    '</table>';
+
+  window.setTimeout(
+    function() {
+      window.print();
+    },
+    500
+  );
+}
+
+
+function cetakLaporanKelas() {
+  printIndividualClassReport();
+}
+
+
+function cetakLaporanIndividu() {
+
+  const data =
+    window.currentAttendanceAnalysis;
+
+  const classSelect =
+    document.getElementById("individualClass");
+
+  const className =
+    classSelect
+      ? String(classSelect.value || "").trim()
+      : "";
+
+  if (!data || !className) {
+    alert("Sila pilih kelas terlebih dahulu.");
+    return;
+  }
+
+  const students =
+    getIndividualClassStudents();
+
+  if (!students.length) {
+    alert("Tiada murid untuk kelas yang dipilih.");
+    return;
+  }
+
+  const schoolName =
+    getCurrentSchoolNameForPrint();
+
+  const logo =
+    getCurrentSchoolLogoForPrint();
+
+  const logoHtml =
+    logo
+      ? '<img src="' + escapeAttribute(logo) +
+        '" style="max-height:65px;max-width:100px;object-fit:contain;">'
+      : "";
+
+  const tableRows =
+    students.map(function(student, index) {
+      return (
+        "<tr>" +
+          "<td>" + (index + 1) + "</td>" +
+          "<td>" + escapeHtml(student.name || "") + "</td>" +
+          "<td>" + escapeHtml(student.id || "") + "</td>" +
+          "<td>" + escapeHtml(student.className || "") + "</td>" +
+          "<td>" + Number(student.schoolDays || 0) + "</td>" +
+          "<td>" + Number(student.present || 0) + "</td>" +
+          "<td>" + Number(student.absent || 0) + "</td>" +
+          "<td>" + Number(student.percentage || 0) + "%</td>" +
+        "</tr>"
+      );
+    }).join("");
+
+  openPrintWindow(
+    schoolName,
+    logoHtml,
+    "LAPORAN KEHADIRAN INDIVIDU MURID",
+    "Tempoh: " +
+      formatReportDate(data.startDate) +
+      " – " +
+      formatReportDate(data.endDate) +
+      " | Kelas: " +
+      className,
+    '<table><thead><tr>' +
+      '<th>Bil</th><th>Nama Murid</th><th>ID</th><th>Kelas</th>' +
+      '<th>Hari Sekolah</th><th>Hadir</th><th>Tidak Hadir</th>' +
+      '<th>% Kehadiran</th>' +
+    '</tr></thead><tbody>' +
+      tableRows +
+    '</tbody></table>'
+  );
+}
+
+function openPrintWindow(
+  schoolName,
+  logoHtml,
+  title,
+  subtitle,
+  tableHtml
+) {
+
+  const printWindow =
+    window.open(
+      "",
+      "_blank",
+      "width=1000,height=800,noopener=no"
+    );
+
+  if (!printWindow) {
+    alert(
+      "Popup cetakan disekat. Sila benarkan pop-up untuk laman SATS, kemudian tekan butang cetak sekali lagi."
+    );
+    return;
+  }
+
+  const documentHtml =
+    '<!doctype html>' +
+    '<html><head><meta charset="utf-8">' +
+    '<title>' + escapeHtml(title) + '</title>' +
+    '<style>' +
+      '@page { size:A4 portrait; margin:12mm; }' +
+      'body { font-family:Arial,sans-serif; font-size:10px; color:#111; }' +
+      '.head { text-align:center; margin-bottom:14px; }' +
+      '.head img { display:block; margin:0 auto 6px; }' +
+      '.school { font-size:17px; font-weight:700; }' +
+      '.title { font-size:15px; font-weight:700; margin-top:4px; }' +
+      '.meta { font-size:11px; margin-top:6px; }' +
+      'table { width:100%; border-collapse:collapse; margin-top:14px; }' +
+      'th,td { border:1px solid #333; padding:5px; }' +
+      'th { font-weight:700; background:#f3f4f6; }' +
+      'tr { break-inside:avoid; page-break-inside:avoid; }' +
+    '</style></head><body>' +
+      '<div class="head">' +
+        logoHtml +
+        '<div class="school">' + escapeHtml(schoolName) + '</div>' +
+        '<div class="title">' + escapeHtml(title) + '</div>' +
+        '<div class="meta">' + escapeHtml(subtitle) + '</div>' +
+      '</div>' +
+      tableHtml +
+    '</body></html>';
+
+  printWindow.document.open();
+  printWindow.document.write(documentHtml);
+  printWindow.document.close();
+
+  let hasPrinted = false;
+
+  const doPrint =
+    function() {
+
+      if (hasPrinted) {
+        return;
+      }
+
+      hasPrinted = true;
+
+      printWindow.focus();
+      printWindow.print();
+
+    };
+
+  const images =
+    printWindow.document.images;
+
+  if (!images.length) {
+
+    setTimeout(
+      doPrint,
+      700
+    );
+
+  } else {
+
+    let pending =
+      images.length;
+
+    const imageDone =
+      function() {
+
+        pending -= 1;
+
+        if (pending <= 0) {
+
+          setTimeout(
+            doPrint,
+            300
+          );
+
+        }
+
+      };
+
+    Array.prototype.forEach.call(
+      images,
+      function(img) {
+
+        if (img.complete) {
+          imageDone();
+        } else {
+          img.onload = imageDone;
+          img.onerror = imageDone;
+        }
+
+      }
+    );
+
+    // Safety timeout; guarded so printing can only happen once.
+    setTimeout(
+      doPrint,
+      2500
+    );
+
+  }
+} 
+
+
+function printIndividualClassReport() {
+
+  const data =
+    window.currentAttendanceAnalysis;
+
+  const className =
+    document.getElementById(
+      "individualClass"
+    ).value;
+
+  if (!data || !className) {
+
+    alert(
+      "Sila pilih kelas terlebih dahulu."
+    );
+
+    return;
+  }
+
+  const students =
+    getIndividualClassStudents();
+
+  if (!students.length) {
+
+    alert(
+      "Tiada murid untuk kelas yang dipilih."
+    );
+
+    return;
+  }
+
+  preparePrintRoot(
+    "LAPORAN KEHADIRAN INDIVIDU MURID",
+    "Tempoh: " +
+      formatReportDate(
+        data.startDate
+      ) +
+      " – " +
+      formatReportDate(
+        data.endDate
+      ) +
+      " | Kelas: " +
+      className +
+      " | Jumlah Murid: " +
+      students.length,
+    students
+  );
+}
+
+
+function printAllStudentAttendanceReport() {
+
+  /*
+   * Backward-compatible alias.
+   * The individual report now prints only the selected class.
+   */
+  printIndividualClassReport();
+}
+
+
+function cetakPerbandinganKelas() {
+
+  const data =
+    window.currentAttendanceAnalysis;
+
+  if (
+    !data ||
+    !Array.isArray(data.classes) ||
+    !data.classes.length
+  ) {
+    alert("Sila papar analisis kelas terlebih dahulu.");
+    return;
+  }
+
+  const rows =
+    data.classes.slice().sort(function(a, b) {
+      return String(a.className || "").localeCompare(
+        String(b.className || ""),
+        undefined,
+        { numeric: true, sensitivity: "base" }
+      );
+    });
+
+  const schoolName =
+    getCurrentSchoolNameForPrint();
+
+  const logo =
+    getCurrentSchoolLogoForPrint();
+
+  const logoHtml =
+    logo
+      ? '<img src="' + escapeAttribute(logo) +
+        '" style="max-height:65px;max-width:100px;object-fit:contain;">'
+      : "";
+
+  const tableRows =
+    rows.map(function(row, index) {
+      return (
+        "<tr>" +
+          "<td>" + (index + 1) + "</td>" +
+          "<td>" + escapeHtml(row.className || "") + "</td>" +
+          "<td>" + Number(row.studentCount || 0) + "</td>" +
+          "<td>" + Number(row.schoolDays || 0) + "</td>" +
+          "<td>" + Number(row.present || 0) + "</td>" +
+          "<td>" + Number(row.absent || 0) + "</td>" +
+          "<td>" + Number(row.percentage || 0) + "%</td>" +
+        "</tr>"
+      );
+    }).join("");
+
+  const title =
+    "LAPORAN KEHADIRAN MENGIKUT KELAS";
+
+  const subtitle =
+    "Tempoh: " +
+    formatReportDate(data.startDate) +
+    " – " +
+    formatReportDate(data.endDate) +
+    " | " +
+    (data.className
+      ? "Kelas: " + data.className
+      : "Semua Kelas");
+
+  openPrintWindow(
+    schoolName,
+    logoHtml,
+    title,
+    subtitle,
+    '<table><thead><tr>' +
+      '<th>Bil</th><th>Kelas</th><th>Jumlah Murid</th>' +
+      '<th>Hari Sekolah</th><th>Hadir</th><th>Tidak Hadir</th>' +
+      '<th>% Kehadiran</th>' +
+    '</tr></thead><tbody>' +
+      tableRows +
+    '</tbody></table>'
+  );
+}
+
+function printClassAttendanceReport() {
+
+  const data =
+    window.currentAttendanceAnalysis;
+
+  if (
+    !data ||
+    !Array.isArray(data.classes) ||
+    !data.classes.length
+  ) {
+
+    alert(
+      "Sila papar analisis kelas terlebih dahulu."
+    );
+
+    return;
+  }
+
+  const rows =
+    data.classes.slice().sort(
+      function(a, b) {
+        return String(
+          a.className || ""
+        ).localeCompare(
+          String(
+            b.className || ""
+          ),
+          undefined,
+          {
+            numeric: true,
+            sensitivity: "base"
+          }
+        );
+      }
+    );
+
+  let printRoot =
+    document.getElementById(
+      "satsPrintReport"
+    );
+
+  if (!printRoot) {
+
+    printRoot =
+      document.createElement(
+        "div"
+      );
+
+    printRoot.id =
+      "satsPrintReport";
+
+    document.body.appendChild(
+      printRoot
+    );
+
+  }
+
+  const schoolName =
+    getCurrentSchoolNameForPrint();
+
+  const logo =
+    getCurrentSchoolLogoForPrint();
+
+  let logoHtml = "";
+
+  if (logo) {
+
+    logoHtml =
+      '<img src="' +
+      escapeAttribute(logo) +
+      '" style="max-height:65px;max-width:100px;object-fit:contain;margin-bottom:6px;">';
+
+  }
+
+  const tableRows =
+    rows.map(
+      function(row, index) {
+
+        return (
+          "<tr>" +
+            "<td>" +
+              (index + 1) +
+            "</td>" +
+            "<td>" +
+              escapeHtml(
+                row.className || ""
+              ) +
+            "</td>" +
+            "<td>" +
+              Number(
+                row.studentCount || 0
+              ) +
+            "</td>" +
+            "<td>" +
+              Number(
+                row.schoolDays || 0
+              ) +
+            "</td>" +
+            "<td>" +
+              Number(
+                row.present || 0
+              ) +
+            "</td>" +
+            "<td>" +
+              Number(
+                row.absent || 0
+              ) +
+            "</td>" +
+            "<td style='font-weight:700;'>" +
+              Number(
+                row.percentage || 0
+              ) +
+              "%" +
+            "</td>" +
+          "</tr>"
+        );
+
+      }
+    ).join("");
+
+  printRoot.innerHTML =
+
+    '<div class="sats-print-title">' +
+      logoHtml +
+
+      '<div style="font-size:17px;font-weight:700;">' +
+        escapeHtml(schoolName) +
+      '</div>' +
+
+      '<div style="font-size:15px;font-weight:700;margin-top:3px;">' +
+        'LAPORAN KEHADIRAN MENGIKUT KELAS' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="sats-print-meta">' +
+      'Tempoh: ' +
+      escapeHtml(
+        formatReportDate(
+          data.startDate
+        )
+      ) +
+      ' – ' +
+      escapeHtml(
+        formatReportDate(
+          data.endDate
+        )
+      ) +
+      ' | ' +
+      (
+        data.className
+          ? 'Kelas: ' +
+            escapeHtml(
+              data.className
+            )
+          : 'Semua Kelas'
+      ) +
+    '</div>' +
+
+    '<table class="sats-print-table">' +
+
+      '<thead>' +
+        '<tr>' +
+          '<th>Bil</th>' +
+          '<th>Kelas</th>' +
+          '<th>Jumlah Murid</th>' +
+          '<th>Hari Sekolah</th>' +
+          '<th>Hadir</th>' +
+          '<th>Tidak Hadir</th>' +
+          '<th>% Kehadiran</th>' +
+        '</tr>' +
+      '</thead>' +
+
+      '<tbody>' +
+        tableRows +
+      '</tbody>' +
+
+    '</table>';
+
+  window.setTimeout(
+    function() {
+      window.print();
+    },
+    500
+  );
+}
+
+
+function formatReportDate(
+  value
+) {
+
+  const parts =
+    String(
+      value || ""
+    ).split("-");
+
+  if (
+    parts.length !== 3
+  ) {
+    return value || "";
+  }
+
+  return (
+    parts[2] +
+    "/" +
+    parts[1] +
+    "/" +
+    parts[0]
+  );
+}
+
+
+
+/* =================================================
+   SCHOOL CALENDAR / CUTI SEKOLAH
+   ================================================= */
+
+let schoolCalendarEntries = [];
+
+function loadSchoolCalendar() {
+
+  const body = document.getElementById("schoolCalendarBody");
+  if (!body) return;
+
+  body.innerHTML =
+    '<tr><td colspan="5" style="padding:15px;text-align:center;">Memuatkan kalendar...</td></tr>';
+
+  callSATS(
+    SATS_API + "?action=getSchoolCalendar",
+    function(data) {
+
+      if (!data || !data.success) {
+        body.innerHTML =
+          '<tr><td colspan="5" style="padding:15px;text-align:center;color:#991b1b;">' +
+          escapeHtml((data && data.message) || "Gagal mendapatkan kalendar sekolah.") +
+          '</td></tr>';
+        return;
+      }
+
+      schoolCalendarEntries =
+        Array.isArray(data.calendar) ? data.calendar : [];
+
+      renderSchoolCalendar();
+    }
+  );
+}
+
+function renderSchoolCalendar() {
+
+  const body = document.getElementById("schoolCalendarBody");
+  if (!body) return;
+
+  if (!schoolCalendarEntries.length) {
+    body.innerHTML =
+      '<tr><td colspan="5" style="padding:15px;text-align:center;">Tiada pengecualian. Peraturan lalai masih digunakan.</td></tr>';
+    return;
+  }
+
+  const seen = new Set();
+
+  const uniqueEntries =
+    schoolCalendarEntries.filter(function(entry) {
+
+      const key =
+        String(entry.startDate || "") + "|" +
+        String(entry.endDate || "") + "|" +
+        String(entry.status || "") + "|" +
+        String(entry.description || "").trim();
+
+      if (seen.has(key)) {
+        return false;
+      }
+
+      seen.add(key);
+      return true;
+
+    });
+
+  body.innerHTML =
+    uniqueEntries.map(function(entry) {
+
+      const status = String(entry.status || "");
+      let badgeClass = "non-schooling";
+      let label = "🔴 Bukan Hari Persekolahan";
+
+      if (status === "SCHOOLING") {
+        badgeClass = "schooling";
+        label = "🟢 Hari Persekolahan";
+      } else if (status === "HOLIDAY") {
+        badgeClass = "holiday";
+        label = "🏖️ Cuti";
+      }
+
+      return (
+        "<tr>" +
+          "<td>" + escapeHtml(formatCalendarDate(entry.startDate)) + "</td>" +
+          "<td>" + escapeHtml(formatCalendarDate(entry.endDate)) + "</td>" +
+          '<td><span class="calendar-badge ' + badgeClass + '">' + label + "</span></td>" +
+          "<td>" + escapeHtml(entry.description || "") + "</td>" +
+          "<td><div class=\"calendar-actions\">" +
+            '<button type="button" class="calendar-action-button" onclick="editSchoolCalendarEntry(' +
+              Number(entry.rowNumber || 0) + ')">✏️ Edit</button>' +
+            '<button type="button" class="calendar-action-button delete" onclick="deleteSchoolCalendarEntry(' +
+              Number(entry.rowNumber || 0) + ')">🗑️ Padam</button>' +
+          "</div></td>" +
+        "</tr>"
+      );
+    }).join("");
+}
+
+function formatCalendarDate(value) {
+
+  const raw = String(value || "");
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const parts = raw.split("-");
+    return parts[2] + "/" + parts[1] + "/" + parts[0];
+  }
+
+  return raw;
+}
+
+function saveSchoolCalendarEntry() {
+
+  const rowNumber =
+    Number(document.getElementById("calendarRowNumber").value || 0);
+
+  const startDate =
+    document.getElementById("calendarStartDate").value;
+
+  const endDate =
+    document.getElementById("calendarEndDate").value;
+
+  const status =
+    document.getElementById("calendarStatus").value;
+
+  const description =
+    document.getElementById("calendarDescription").value.trim();
+
+  if (!startDate || !endDate) {
+    alert("Sila pilih tarikh mula dan tarikh akhir.");
+    return;
+  }
+
+  if (startDate > endDate) {
+    alert("Tarikh mula tidak boleh melebihi tarikh akhir.");
+    return;
+  }
+
+  const action =
+    rowNumber > 0 ? "updateSchoolCalendar" : "addSchoolCalendar";
+
+  const url =
+    SATS_API +
+    "?action=" + action +
+    "&rowNumber=" + encodeURIComponent(rowNumber) +
+    "&startDate=" + encodeURIComponent(startDate) +
+    "&endDate=" + encodeURIComponent(endDate) +
+    "&status=" + encodeURIComponent(status) +
+    "&description=" + encodeURIComponent(description);
+
+  callSATS(url, function(data) {
+
+    if (!data || !data.success) {
+      alert((data && data.message) || "Gagal menyimpan kalendar sekolah.");
+      return;
+    }
+
+    cancelSchoolCalendarEdit();
+    loadSchoolCalendar();
+  });
+}
+
+function editSchoolCalendarEntry(rowNumber) {
+
+  const entry =
+    schoolCalendarEntries.find(function(item) {
+      return Number(item.rowNumber) === Number(rowNumber);
+    });
+
+  if (!entry) {
+    alert("Rekod kalendar tidak dijumpai.");
+    return;
+  }
+
+  document.getElementById("calendarRowNumber").value = Number(entry.rowNumber);
+  document.getElementById("calendarStartDate").value = entry.startDate || "";
+  document.getElementById("calendarEndDate").value = entry.endDate || entry.startDate || "";
+  document.getElementById("calendarStatus").value = entry.status || "HOLIDAY";
+  document.getElementById("calendarDescription").value = entry.description || "";
+
+  document.getElementById("calendarFormTitle").textContent =
+    "✏️ Edit Pengecualian Kalendar";
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function cancelSchoolCalendarEdit() {
+
+  document.getElementById("calendarRowNumber").value = "";
+  document.getElementById("calendarStartDate").value = "";
+  document.getElementById("calendarEndDate").value = "";
+  document.getElementById("calendarStatus").value = "SCHOOLING";
+  document.getElementById("calendarDescription").value = "";
+
+  document.getElementById("calendarFormTitle").textContent =
+    "➕ Tambah Pengecualian Kalendar";
+}
+
+function deleteSchoolCalendarEntry(rowNumber) {
+
+  const entry =
+    schoolCalendarEntries.find(function(item) {
+      return Number(item.rowNumber) === Number(rowNumber);
+    });
+
+  if (!entry) return;
+
+  if (!confirm(
+    "Padam rekod " +
+    formatCalendarDate(entry.startDate) +
+    " – " +
+    formatCalendarDate(entry.endDate) +
+    "?"
+  )) {
+    return;
+  }
+
+  callSATS(
+    SATS_API +
+    "?action=deleteSchoolCalendar" +
+    "&rowNumber=" +
+    encodeURIComponent(rowNumber),
+    function(data) {
+
+      if (!data || !data.success) {
+        alert((data && data.message) || "Gagal memadam rekod kalendar.");
+        return;
+      }
+
+      loadSchoolCalendar();
+    }
+  );
+}
+
+
+/* =================================================
+   JSONP HELPER
+   ================================================= */
+
+function callSATS(
+  url,
+  callback,
+  attempt
+) {
+
+  attempt =
+    Number(attempt || 0);
+
+  const callbackName =
+    "satsCallback_" +
+    Date.now() +
+    "_" +
+    Math.floor(
+      Math.random() * 1000000
+    );
+
+  let finished = false;
+
+  const script =
+    document.createElement(
+      "script"
+    );
+
+  const cleanup =
+    function() {
+
+      if (script.parentNode) {
+        script.parentNode.removeChild(
+          script
+        );
+      }
+
+      try {
+        delete window[callbackName];
+      } catch(error) {}
+
+    };
+
+  const finish =
+    function(data) {
+
+      if (finished) return;
+
+      finished = true;
+
+      clearTimeout(
+        timeoutId
+      );
+
+      cleanup();
+
+      callback(
+        data
+      );
+
+    };
+
+  window[callbackName] =
+    function(data) {
+      finish(data);
+    };
+
+  script.src =
+    url +
+    (url.indexOf("?") >= 0 ? "&" : "?") +
+    "callback=" +
+    callbackName;
+
+  script.async =
+    true;
+
+  script.onerror =
+    function() {
+
+      if (
+        !finished &&
+        attempt < 2
+      ) {
+
+        finished = true;
+
+        clearTimeout(
+          timeoutId
+        );
+
+        cleanup();
+
+        setTimeout(
+          function() {
+
+            callSATS(
+              url,
+              callback,
+              attempt + 1
+            );
+
+          },
+          500 * (attempt + 1)
+        );
+
+        return;
+
+      }
+
+      finish({
+
+        success: false,
+
+        type:
+          "connection",
+
+        message:
+          "Ralat sambungan ke SATS. Sila semak internet dan cuba lagi."
+
+      });
+
+    };
+
+  document.body.appendChild(
+    script
+  );
+
+  const timeoutId =
+    setTimeout(
+      function() {
+
+        if (finished) return;
+
+        if (attempt < 2) {
+
+          finished = true;
+
+          cleanup();
+
+          setTimeout(
+            function() {
+
+              callSATS(
+                url,
+                callback,
+                attempt + 1
+              );
+
+            },
+            500 * (attempt + 1)
+          );
+
+          return;
+
+        }
+
+        finish({
+
+          success: false,
+
+          type:
+            "connection",
+
+          message:
+            "SATS mengambil masa terlalu lama untuk memberi respons."
+
+        });
+
+      },
+      12000
+    );
+
+}
+
+
+
+/* =================================================
+   SATS MOBILE CONNECTION / DATA MANAGER
+   ================================================= */
+
+let satsConnected = false;
+let satsBooting = false;
+let satsSchoolSettings = null;
+let satsClassesReady = false;
+let satsStudentsReady = false;
+
+
+function setSATSConnectionStatus(
+  state,
+  message
+) {
+
+  const status =
+    document.getElementById(
+      "satsConnectionStatus"
+    );
+
+  if (!status) return;
+
+  if (state === "connected") {
+
+    status.innerHTML =
+      '<span style="display:inline-flex;align-items:center;gap:6px;">' +
+      '<span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;"></span>' +
+      '<span>SATS Connected</span>' +
+      '</span>';
+
+    status.style.color =
+      "#166534";
+
+    status.style.background =
+      "#ecfdf5";
+
+    status.style.borderColor =
+      "#bbf7d0";
+
+    return;
+  }
+
+  if (state === "loading") {
+
+    status.innerHTML =
+      '<span style="display:inline-flex;align-items:center;gap:6px;">' +
+      '<span>⏳</span>' +
+      '<span>' +
+      escapeHtml(
+        message ||
+        "Menyambung ke SATS..."
+      ) +
+      '</span>' +
+      '</span>';
+
+    status.style.color =
+      "#92400e";
+
+    status.style.background =
+      "#fffbeb";
+
+    status.style.borderColor =
+      "#fde68a";
+
+    return;
+  }
+
+  status.innerHTML =
+    '<span style="display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
+    '<span>🔴</span>' +
+    '<span>' +
+    escapeHtml(
+      message ||
+      "Ralat sambungan ke SATS."
+    ) +
+    '</span>' +
+    '<button type="button" onclick="bootSATS(true)" ' +
+    'style="border:0;background:#991b1b;color:#fff;border-radius:7px;padding:4px 9px;cursor:pointer;">' +
+    'Cuba Semula' +
+    '</button>' +
+    '</span>';
+
+  status.style.color =
+    "#991b1b";
+
+  status.style.background =
+    "#fef2f2";
+
+  status.style.borderColor =
+    "#fecaca";
+
+}
+
+
+function ensureSATSConnectionBar() {
+
+  if (
+    document.getElementById(
+      "satsConnectionStatus"
+    )
+  ) {
+    return;
+  }
+
+  const status =
+    document.createElement(
+      "div"
+    );
+
+  status.id =
+    "satsConnectionStatus";
+
+  status.style.cssText =
+    "margin:10px auto 0;" +
+    "max-width:1100px;" +
+    "padding:7px 11px;" +
+    "border:1px solid #fde68a;" +
+    "border-radius:9px;" +
+    "font-size:12px;" +
+    "font-weight:700;" +
+    "background:#fffbeb;" +
+    "color:#92400e;" +
+    "box-sizing:border-box;";
+
+  status.innerHTML =
+    "⏳ Menyambung ke SATS...";
+
+  const topbar =
+    document.querySelector(
+      ".topbar"
+    );
+
+  if (topbar) {
+    topbar.appendChild(status);
+  } else {
+    document.body.prepend(status);
+  }
+
+}
+
+
+function bootSATS(
+  force
+) {
+
+  if (
+    satsBooting &&
+    !force
+  ) {
+    return;
+  }
+
+  satsBooting =
+    true;
+
+  satsConnected =
+    false;
+
+  satsSchoolSettings =
+    null;
+
+  satsClassesReady =
+    false;
+
+  // Do NOT load all students during startup.
+  // Students are loaded only when the relevant page needs them.
+  satsStudentsReady =
+    false;
+
+  ensureSATSConnectionBar();
+
+  setSATSConnectionStatus(
+    "loading",
+    "Menyambung ke SATS..."
+  );
+
+  let settingsDone =
+    false;
+
+  let classesDone =
+    false;
+
+  let settingsOK =
+    false;
+
+  let classesOK =
+    false;
+
+
+  const complete =
+    function() {
+
+      if (
+        !settingsDone ||
+        !classesDone
+      ) {
+        return;
+      }
+
+      satsBooting =
+        false;
+
+      if (
+        settingsOK &&
+        classesOK
+      ) {
+
+        satsConnected =
+          true;
+
+        setSATSConnectionStatus(
+          "connected"
+        );
+
+      } else {
+
+        satsConnected =
+          false;
+
+        setSATSConnectionStatus(
+          "error",
+          "Tetapan atau senarai kelas SATS tidak dapat dimuatkan."
+        );
+
+      }
+
+    };
+
+
+  // Load school settings first.
+  callSATS(
+    SATS_API +
+    "?action=getSettings",
+    function(data) {
+
+      settingsDone =
+        true;
+
+      if (
+        data &&
+        data.success
+      ) {
+
+        settingsOK =
+          true;
+
+        satsSchoolSettings =
+          data;
+
+        applySchoolSettings(
+          data
+        );
+
+      }
+
+      complete();
+
+    }
+  );
+
+
+  // Load only the class list during startup.
+  callSATS(
+    SATS_API +
+    "?action=getClasses",
+    function(data) {
+
+      classesDone =
+        true;
+
+      if (
+        data &&
+        data.success
+      ) {
+
+        classesOK =
+          true;
+
+        allClasses =
+          Array.isArray(
+            data.classes
+          )
+            ? data.classes
+            : [];
+
+        satsClassesReady =
+          true;
+
+        populateAllClassSelectors();
+
+      }
+
+      complete();
+
+    }
+  );
+
+}
+
+
+
+function showStudentsLoadingState() {
+
+  const candidates = [
+    "studentsStatus",
+    "studentStatus",
+    "dataMuridStatus"
+  ];
+
+  candidates.forEach(
+    function(id) {
+
+      const node =
+        document.getElementById(id);
+
+      if (node) {
+        node.innerText =
+          "⏳ Memuatkan data murid...";
+      }
+
+    }
+  );
+
+}
+
+function ensureStudentsLoaded(
+  done
+) {
+
+  if (
+    satsStudentsReady &&
+    Array.isArray(allStudents)
+  ) {
+
+    if (
+      typeof done ===
+      "function"
+    ) {
+      done(
+        allStudents
+      );
+    }
+
+    return;
+  }
+
+
+  // Prevent duplicate student requests.
+  if (
+    window.satsStudentsLoading
+  ) {
+
+    window.satsStudentsWaiters =
+      window.satsStudentsWaiters ||
+      [];
+
+    if (
+      typeof done ===
+      "function"
+    ) {
+      window.satsStudentsWaiters.push(
+        done
+      );
+    }
+
+    return;
+
+  }
+
+
+  window.satsStudentsLoading =
+    true;
+
+  showStudentsLoadingState();
+
+  window.satsStudentsWaiters =
+    [];
+
+  if (
+    typeof done ===
+    "function"
+  ) {
+    window.satsStudentsWaiters.push(
+      done
+    );
+  }
+
+
+  callSATS(
+    SATS_API +
+    "?action=getStudents",
+    function(data) {
+
+      window.satsStudentsLoading =
+        false;
+
+      if (
+        data &&
+        data.success
+      ) {
+
+        allStudents =
+          Array.isArray(
+            data.students
+          )
+            ? data.students
+            : [];
+
+        satsStudentsReady =
+          true;
+
+        renderStudentDataFromCache();
+
+      }
+
+
+      const waiters =
+        window.satsStudentsWaiters ||
+        [];
+
+      window.satsStudentsWaiters =
+        [];
+
+
+      waiters.forEach(
+        function(waiter) {
+
+          try {
+
+            waiter(
+              satsStudentsReady
+                ? allStudents
+                : []
+            );
+
+          }
+
+          catch(error) {
+
+            console.warn(
+              "Student waiter error:",
+              error
+            );
+
+          }
+
+        }
+      );
+
+    }
+  );
+
+}
+
+
+function populateAllClassSelectors() {
+
+  try {
+    populateManualClasses();
+  } catch(error) {}
+
+  try {
+    populateReportClasses();
+  } catch(error) {}
+
+  try {
+    populateDashboardClasses(
+      allClasses
+    );
+  } catch(error) {}
+
+  try {
+    populateRiskClasses(
+      allClasses
+    );
+  } catch(error) {}
+
+  try {
+    populateStudentClassFilter();
+  } catch(error) {}
+
+}
+
+
+function renderStudentDataFromCache() {
+  if (!satsStudentsReady) {
+    ensureStudentsLoaded(
+      function() {
+        renderStudentDataFromCache();
+      }
+    );
+    return;
+  }
+
+
+
+  try {
+
+    if (
+      typeof renderStudents ===
+      "function"
+    ) {
+      renderStudents(
+        allStudents
+      );
+    }
+
+  }
+
+  catch(error) {
+
+    console.warn(
+      "Cache murid tidak dapat dipaparkan:",
+      error
+    );
+
+  }
+
+}
+
+
+function applySchoolSettings(
+  data
+) {
+
+  if (!data) return;
+
+  const settings =
+    data.settings ||
+    data.school ||
+    data;
+
+  const schoolName =
+    settings.schoolName ||
+    settings.namaSekolah ||
+    settings.name ||
+    "";
+
+  const logo =
+    settings.logo ||
+    settings.logoUrl ||
+    settings.schoolLogo ||
+    "";
+
+  if (schoolName) {
+
+    const nodes =
+      document.querySelectorAll(
+        ".school-name, #schoolName, #schoolNameSetting"
+      );
+
+    nodes.forEach(
+      function(node) {
+
+        if (
+          node.tagName ===
+          "INPUT"
+        ) {
+          node.value =
+            schoolName;
+        } else {
+          node.innerText =
+            schoolName;
+        }
+
+      }
+    );
+
+  }
+
+  if (logo) {
+
+    const images =
+      document.querySelectorAll(
+        ".school-logo, #schoolLogo, #logoSekolah"
+      );
+
+    images.forEach(
+      function(image) {
+
+        image.src =
+          logo;
+
+      }
+    );
+
+  }
+
+}
+
+
+/* =================================================
+   LOAD CLASSES
+   ================================================= */
+
+function loadClasses(
+  done
+) {
+
+  if (satsClassesReady) {
+    populateAllClassSelectors();
+    if (typeof done === "function") {
+      done(allClasses);
+    }
+    return;
+  }
+
+  const addSelect = document.getElementById("studentClassInput");
+  const filterSelect = document.getElementById("studentClassFilter");
+
+  if (!addSelect || !filterSelect) return;
+
+  const url = SATS_API + "?action=getClasses";
+
+  callSATS(url, function(data) {
+
+    if (!data || !data.success) {
+      console.warn("Kelas tidak dapat dimuat:", data && data.message);
+      if (typeof done === "function") {
+        done([]);
+      }
+      return;
+    }
+
+    // Support the common backend response names.
+    allClasses =
+      data.classes ||
+      data.classList ||
+      data.classNames ||
+      [];
+
+    allClasses = allClasses
+      .map(function(item) {
+        if (typeof item === "string") return item.trim();
+        if (item && item.className) return String(item.className).trim();
+        return "";
+      })
+      .filter(Boolean);
+
+    allClasses = Array.from(new Set(allClasses))
+      .sort(function(a, b) {
+        return a.localeCompare(b, undefined, {numeric: true});
+      });
+
+    addSelect.innerHTML =
+      '<option value="">Pilih Kelas</option>' +
+      allClasses.map(function(className) {
+        return '<option value="' +
+          escapeAttribute(className) +
+          '">' +
+          escapeHtml(className) +
+          '</option>';
+      }).join("");
+
+    filterSelect.innerHTML =
+      '<option value="">Semua Kelas</option>' +
+      allClasses.map(function(className) {
+        return '<option value="' +
+          escapeAttribute(className) +
+          '">' +
+          escapeHtml(className) +
+          '</option>';
+      }).join("");
+
+    if (typeof done === "function") {
+      done(allClasses);
+    }
+
+  });
+}
+
+
+/* =================================================
+   ADD STUDENT
+   ================================================= */
+
+function addNewStudent() {
+
+
+  const id =
+    document
+      .getElementById(
+        "studentIdInput"
+      )
+      .value
+      .trim();
+
+
+  const name =
+    document
+      .getElementById(
+        "studentNameInput"
+      )
+      .value
+      .trim();
+
+
+  const className =
+    document
+      .getElementById(
+        "studentClassInput"
+      )
+      .value
+      .trim();
+
+
+  if (
+    !id ||
+    !name ||
+    !className
+  ) {
+
+    alert(
+      "Sila lengkapkan semua maklumat murid."
+    );
+
+    return;
+
+  }
+
+
+  const button =
+    document.querySelector(
+      "#students .button-dark"
+    );
+
+
+  button.disabled =
+    true;
+
+
+  button.innerText =
+    "⏳ MENYIMPAN...";
+
+
+  const url =
+    SATS_API +
+    "?action=addStudent" +
+    "&id=" +
+    encodeURIComponent(id) +
+    "&name=" +
+    encodeURIComponent(name) +
+    "&className=" +
+    encodeURIComponent(className);
+
+
+  callSATS(
+    url,
+    function(data) {
+
+      button.disabled =
+        false;
+
+
+      button.innerText =
+        "SIMPAN MURID";
+
+
+      if (
+        data.success
+      ) {
+
+        alert(
+          "✓ Murid berjaya ditambah."
+        );
+
+
+        document
+          .getElementById(
+            "studentIdInput"
+          )
+          .value = "";
+
+
+        document
+          .getElementById(
+            "studentNameInput"
+          )
+          .value = "";
+
+
+        document
+          .getElementById(
+            "studentClassInput"
+          )
+          .value = "";
+
+
+        loadStudents();
+
+
+      }
+
+      else {
+
+        alert(
+          "✕ " +
+          (
+            data.message ||
+            "Gagal menambah murid."
+          )
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =================================================
+   LOAD STUDENTS
+   ================================================= */
+
+
+/* =================================================
+   KEHADIRAN MANUAL
+   ================================================= */
+
+const MANUAL_REASONS = [
+  "Sakit",
+  "Urusan keluarga",
+  "Mendapat kebenaran",
+  "Aktiviti sekolah",
+  "Masalah pengangkutan",
+  "Tidak diketahui",
+  "Lain-lain"
+];
+
+
+function getTodayDateInput() {
+
+  const now =
+    new Date();
+
+  return (
+    now.getFullYear() +
+    "-" +
+    String(now.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(now.getDate()).padStart(2, "0")
+  );
+
+}
+
+
+function prepareManualAttendancePage() {
+
+  const date =
+    document.getElementById("manualDate");
+
+  if (
+    date &&
+    !date.value
+  ) {
+    date.value =
+      getTodayDateInput();
+  }
+
+  if (!allClasses.length) {
+
+    populateManualClasses();
+
+    loadClasses(
+      function() {
+        populateManualClasses();
+      }
+    );
+
+    return;
+
+  }
+
+  populateManualClasses();
+
+}
+
+
+function populateManualClasses() {
+
+  const select =
+    document.getElementById("manualClass");
+
+  if (!select) return;
+
+  const current =
+    select.value;
+
+  select.innerHTML =
+    '<option value="">Pilih Kelas</option>' +
+    allClasses.map(function(className) {
+      return (
+        '<option value="' +
+        escapeAttribute(className) +
+        '">' +
+        escapeHtml(className) +
+        "</option>"
+      );
+    }).join("");
+
+  if (current) {
+    select.value =
+      current;
+  }
+
+}
+
+
+function manualStatusOptions(status, locked) {
+
+  return (
+    '<select class="form-input manual-status" ' +
+    (locked ? "disabled" : "") +
+    '>' +
+      '<option value="Hadir" ' +
+        (status === "Hadir" ? "selected" : "") +
+        '>🟢 Hadir</option>' +
+      '<option value="Tidak Hadir" ' +
+        (status === "Tidak Hadir" ? "selected" : "") +
+        '>🔴 Tidak Hadir</option>' +
+    '</select>'
+  );
+
+}
+
+
+function manualReasonOptions(reason, locked) {
+
+  return (
+    '<select class="form-input manual-reason" ' +
+    (locked ? "disabled" : "") +
+    '>' +
+      '<option value="">Pilih alasan</option>' +
+      MANUAL_REASONS.map(function(item) {
+        return (
+          '<option value="' +
+          escapeAttribute(item) +
+          '" ' +
+          (reason === item ? "selected" : "") +
+          '>' +
+          escapeHtml(item) +
+          "</option>"
+        );
+      }).join("") +
+    '</select>'
+  );
+
+}
+
+
+function loadManualAttendance() {
+
+  const date =
+    document.getElementById("manualDate").value;
+
+  const className =
+    document.getElementById("manualClass").value;
+
+  const card =
+    document.getElementById("manualAttendanceCard");
+
+  const body =
+    document.getElementById("manualAttendanceBody");
+
+  const statusBox =
+    document.getElementById("manualCalendarStatus");
+
+  if (!date || !className) {
+    alert("Sila pilih tarikh dan kelas.");
+    return;
+  }
+
+  body.innerHTML =
+    '<tr><td colspan="7" style="padding:15px;text-align:center;">Memuatkan senarai murid...</td></tr>';
+
+  card.style.display =
+    "block";
+
+  callSATS(
+    SATS_API +
+    "?action=getManualAttendance" +
+    "&date=" +
+    encodeURIComponent(date) +
+    "&className=" +
+    encodeURIComponent(className),
+
+    function(data) {
+
+      if (!data || !data.success) {
+
+        body.innerHTML =
+          '<tr><td colspan="7" style="padding:15px;text-align:center;color:#991b1b;">' +
+          escapeHtml(
+            (data && data.message) ||
+            "Gagal mendapatkan senarai murid."
+          ) +
+          "</td></tr>";
+
+        return;
+      }
+
+      if (data.schoolDay === false) {
+
+        statusBox.innerHTML =
+          '<div style="padding:10px;border-radius:8px;background:#fef3c7;color:#92400e;">' +
+          "🏖️ Tarikh ini bukan hari persekolahan. " +
+          escapeHtml(
+            data.calendarDescription ||
+            data.calendarStatus ||
+            ""
+          ) +
+          "</div>";
+
+        card.style.display =
+          "none";
+
+        return;
+      }
+
+      statusBox.innerHTML =
+        '<div style="padding:10px;border-radius:8px;background:#dcfce7;color:#166534;">' +
+        "🟢 Hari Persekolahan — boleh mengambil kehadiran secara manual." +
+        "</div>";
+
+      renderManualAttendance(
+        data.students || []
+      );
+
+    }
+  );
+
+}
+
+
+function renderManualAttendance(
+  students
+) {
+
+  const body =
+    document.getElementById(
+      "manualAttendanceBody"
+    );
+
+  if (!students.length) {
+
+    body.innerHTML =
+      '<tr><td colspan="7" style="padding:15px;text-align:center;">Tiada murid dalam kelas ini.</td></tr>';
+
+    return;
+  }
+
+  body.innerHTML =
+    students.map(function(student, index) {
+
+      const locked =
+        !!student.lockedByQR;
+
+      return (
+        "<tr " +
+        'data-student-id="' +
+        escapeAttribute(String(student.id)) +
+        '" ' +
+        'data-locked="' +
+        (locked ? "1" : "0") +
+        '">' +
+
+        "<td>" +
+        (index + 1) +
+        "</td>" +
+
+        "<td><strong>" +
+        escapeHtml(student.name) +
+        "</strong><br><small>" +
+        escapeHtml(student.id) +
+        "</small></td>" +
+
+        "<td>" +
+        escapeHtml(student.className) +
+        "</td>" +
+
+        "<td>" +
+        manualStatusOptions(
+          student.status || "Hadir",
+          locked
+        ) +
+        "</td>" +
+
+        "<td>" +
+        (
+          locked
+            ? "📷 QR"
+            : "✎ MANUAL"
+        ) +
+        "</td>" +
+
+        "<td>" +
+        manualReasonOptions(
+          student.reason || "",
+          locked
+        ) +
+        "</td>" +
+
+        "<td>" +
+        '<input class="form-input manual-note" ' +
+        'placeholder="Catatan (pilihan)" ' +
+        (locked ? "disabled" : "") +
+        ' value="' +
+        escapeAttribute(student.note || "") +
+        '">' +
+        "</td>" +
+
+        "</tr>"
+      );
+
+    }).join("");
+
+  body.querySelectorAll(
+    ".manual-status"
+  ).forEach(function(select) {
+
+    select.addEventListener(
+      "change",
+      function() {
+
+        const row =
+          select.closest("tr");
+
+        const reason =
+          row.querySelector(
+            ".manual-reason"
+          );
+
+        if (
+          select.value ===
+          "Tidak Hadir"
+        ) {
+          reason.disabled =
+            false;
+        } else {
+          reason.value =
+            "";
+          reason.disabled =
+            true;
+        }
+
+      }
+    );
+
+    select.dispatchEvent(
+      new Event("change")
+    );
+
+  });
+
+}
+
+
+function saveManualAttendance() {
+
+  const date =
+    document.getElementById("manualDate").value;
+
+  const className =
+    document.getElementById("manualClass").value;
+
+  const rows =
+    Array.from(
+      document.querySelectorAll(
+        "#manualAttendanceBody tr[data-student-id]"
+      )
+    );
+
+  if (!date || !className) {
+    alert("Sila pilih tarikh dan kelas.");
+    return;
+  }
+
+  if (!rows.length) {
+    alert("Tiada murid untuk disimpan.");
+    return;
+  }
+
+  const entries =
+    rows
+      .filter(function(row) {
+        return row.dataset.locked !== "1";
+      })
+      .map(function(row) {
+
+        return {
+          id:
+            row.getAttribute(
+              "data-student-id"
+            ),
+
+          status:
+            row.querySelector(
+              ".manual-status"
+            ).value,
+
+          reason:
+            row.querySelector(
+              ".manual-reason"
+            ).value,
+
+          note:
+            row.querySelector(
+              ".manual-note"
+            ).value
+        };
+
+      });
+
+  if (!entries.length) {
+    alert(
+      "Semua murid mempunyai rekod QR. Tiada rekod manual untuk disimpan."
+    );
+    return;
+  }
+
+  callSATS(
+    SATS_API +
+    "?action=saveManualAttendance" +
+    "&date=" +
+    encodeURIComponent(date) +
+    "&className=" +
+    encodeURIComponent(className) +
+    "&entries=" +
+    encodeURIComponent(
+      JSON.stringify(entries)
+    ),
+
+    function(data) {
+
+      if (!data || !data.success) {
+
+        alert(
+          (data && data.message) ||
+          "Gagal menyimpan kehadiran manual."
+        );
+
+        return;
+      }
+
+      alert(
+        "Kehadiran manual berjaya disimpan."
+      );
+
+      loadManualAttendance();
+
+    }
+  );
+
+}
+
+
+function loadStudents() {
+
+
+  const container =
+    document.getElementById(
+      "studentList"
+    );
+
+
+  container.innerHTML =
+    "<div class='loading'>" +
+    "⏳ Memuatkan data murid..." +
+    "</div>";
+
+
+  const url =
+    SATS_API +
+    "?action=getStudents";
+
+
+  callSATS(
+    url,
+    function(data) {
+
+      if (
+        !data.success
+      ) {
+
+        container.innerHTML =
+          "<div class='card error'>" +
+          escapeHtml(
+            data.message ||
+            "Gagal mendapatkan data murid."
+          ) +
+          "</div>";
+
+        return;
+
+      }
+
+
+      allStudents =
+        data.students ||
+        [];
+
+      selectedStudentIds.clear();
+
+      // Clear any previous connection/error message.
+      container.innerHTML = "";
+
+      // Build the class dropdown directly from the student data.
+      // This avoids a second API request when opening Data Murid.
+      allClasses =
+        Array.from(
+          new Set(
+            allStudents
+              .map(function(student) {
+                return String(
+                  student.className || ""
+                ).trim();
+              })
+              .filter(Boolean)
+          )
+        ).sort(function(a, b) {
+          return a.localeCompare(
+            b,
+            undefined,
+            {numeric: true}
+          );
+        });
+
+      populateClassDropdowns();
+
+      renderStudents(
+        allStudents
+      );
+
+      updatePrintButton(allStudents.length);
+
+    }
+  );
+
+}
+
+
+function populateClassDropdowns() {
+
+  const addSelect = document.getElementById("studentClassInput");
+  const filterSelect = document.getElementById("studentClassFilter");
+
+  if (addSelect) {
+    const current = addSelect.value;
+
+    addSelect.innerHTML =
+      '<option value="">Pilih Kelas</option>' +
+      allClasses.map(function(className) {
+        return '<option value="' +
+          escapeAttribute(className) +
+          '">' +
+          escapeHtml(className) +
+          '</option>';
+      }).join("");
+
+    if (allClasses.includes(current)) {
+      addSelect.value = current;
+    }
+  }
+
+  if (filterSelect) {
+    const current = filterSelect.value;
+
+    filterSelect.innerHTML =
+      '<option value="">Semua Kelas</option>' +
+      allClasses.map(function(className) {
+        return '<option value="' +
+          escapeAttribute(className) +
+          '">' +
+          escapeHtml(className) +
+          '</option>';
+      }).join("");
+
+    if (allClasses.includes(current)) {
+      filterSelect.value = current;
+    }
+  }
+}
+
+
+/* =================================================
+   RENDER STUDENTS
+   ================================================= */
+
+function renderStudents(
+  students
+) {
+
+
+  const container =
+    document.getElementById(
+      "studentList"
+    );
+
+
+  if (
+    !students.length
+  ) {
+
+    container.innerHTML =
+      "<div class='card empty'>" +
+      "Tiada data murid." +
+      "</div>";
+
+    return;
+
+  }
+
+
+  let html = "";
+
+
+  students.forEach(
+    function(student) {
+
+
+      const qrUrl =
+        "https://quickchart.io/qr?text=" +
+        encodeURIComponent(
+          student.id
+        ) +
+        "&size=300";
+
+
+      html +=
+
+        "<div class='student-card'>" +
+
+          "<div class='student-card-content'>" +
+
+            "<div class='student-select-wrap'>" +
+              "<input type='checkbox' class='student-select' " +
+                "data-student-id='" + escapeAttribute(student.id) + "' " +
+                (selectedStudentIds.has(String(student.id)) ? "checked " : "") +
+                "onchange='toggleStudentSelection(this)'>" +
+              "<div>" +
+
+              "<div class='student-card-name'>" +
+                escapeHtml(
+                  student.name
+                ) +
+              "</div>" +
+
+              "<div class='student-card-info'>" +
+                "ID: " +
+                escapeHtml(
+                  student.id
+                ) +
+              "</div>" +
+
+              "<div class='student-card-info'>" +
+                "Kelas: " +
+                escapeHtml(
+                  student.className
+                ) +
+              "</div>" +
+
+              "</div>" +
+            "</div>" +
+            "<img " +
+              "class='student-qr' " +
+              "src='" +
+              qrUrl +
+              "' " +
+              "alt='QR Code'>" +
+
+          "</div>" +
+
+
+          "<div class='student-actions'>" +
+            "<button " +
+              "class='edit-button' " +
+              "onclick=\"openEditStudent('" +
+              escapeAttribute(
+                student.id
+              ) +
+              "')\">" +
+              "✏️ Edit" +
+            "</button>" +
+
+
+            "<button " +
+              "class='delete-button' " +
+              "onclick=\"deleteStudentFromApp('" +
+              escapeAttribute(
+                student.id
+              ) +
+              "')\">" +
+
+              "🗑️ Padam" +
+
+            "</button>" +
+
+          "</div>" +
+
+        "</div>";
+
+    }
+  );
+
+
+  container.innerHTML =
+    html;
+
+}
+
+
+/* =================================================
+   SEARCH STUDENTS
+   ================================================= */
+
+function filterStudents() {
+
+  const search =
+    document
+      .getElementById("studentSearch")
+      .value
+      .trim()
+      .toLowerCase();
+
+  const selectedClass =
+    document
+      .getElementById("studentClassFilter")
+      .value
+      .trim()
+      .toLowerCase();
+
+  // IMPORTANT:
+  // This filtering is completely local.
+  // Selecting a class does NOT contact SATS API again.
+  const filtered =
+    allStudents.filter(function(student) {
+
+      const id =
+        String(student.id || "").toLowerCase();
+
+      const name =
+        String(student.name || "").toLowerCase();
+
+      const className =
+        String(student.className || "").toLowerCase();
+
+      const matchesSearch =
+        !search ||
+        id.includes(search) ||
+        name.includes(search) ||
+        className.includes(search);
+
+      const matchesClass =
+        !selectedClass ||
+        className === selectedClass;
+
+      return (
+        matchesSearch &&
+        matchesClass
+      );
+    });
+
+  renderStudents(filtered);
+  updatePrintButton(filtered.length);
+
+  const text =
+    document.getElementById(
+      "printSelectionText"
+    );
+
+  if (
+    text &&
+    !selectedStudentIds.size
+  ) {
+
+    if (selectedClass) {
+
+      text.innerText =
+        filtered.length +
+        " murid dalam kelas " +
+        document
+          .getElementById(
+            "studentClassFilter"
+          )
+          .value +
+        ".";
+
+    } else if (search) {
+
+      text.innerText =
+        filtered.length +
+        " murid ditemui.";
+
+    } else {
+
+      text.innerText =
+        "Pilih kelas atau cari murid, kemudian cetak.";
+
+    }
+  }
+}
+
+
+function toggleStudentSelection(checkbox) {
+
+  const id = String(
+    checkbox.getAttribute("data-student-id") || ""
+  );
+
+  if (!id) return;
+
+  if (checkbox.checked) {
+    selectedStudentIds.add(id);
+  } else {
+    selectedStudentIds.delete(id);
+  }
+
+  updateSelectedStudentCount();
+}
+
+
+function updateSelectedStudentCount() {
+
+  const button = document.getElementById("bulkPrintButton");
+  const text = document.getElementById("printSelectionText");
+  const count = selectedStudentIds.size;
+
+  if (button) button.disabled = count === 0;
+
+  if (text) {
+    text.innerText = count
+      ? count + " murid dipilih untuk cetakan."
+      : "Pilih murid untuk dicetak.";
+  }
+}
+
+
+function getFilteredStudentsForSelection() {
+
+  const search =
+    document.getElementById("studentSearch").value.trim().toLowerCase();
+
+  const selectedClass =
+    document.getElementById("studentClassFilter").value.trim().toLowerCase();
+
+  return allStudents.filter(function(student) {
+
+    const id = String(student.id || "").toLowerCase();
+    const name = String(student.name || "").toLowerCase();
+    const className = String(student.className || "").toLowerCase();
+
+    return (
+      (!search || id.includes(search) || name.includes(search) || className.includes(search)) &&
+      (!selectedClass || className === selectedClass)
+    );
+  });
+}
+
+
+function selectAllFilteredStudents() {
+
+  getFilteredStudentsForSelection().forEach(function(student) {
+    selectedStudentIds.add(String(student.id || ""));
+  });
+
+  filterStudents();
+  updateSelectedStudentCount();
+}
+
+
+function clearFilteredStudents() {
+
+  getFilteredStudentsForSelection().forEach(function(student) {
+    selectedStudentIds.delete(String(student.id || ""));
+  });
+
+  filterStudents();
+  updateSelectedStudentCount();
+}
+
+
+function updatePrintButton(count) {
+
+  const button = document.getElementById("bulkPrintButton");
+  const text = document.getElementById("printSelectionText");
+
+  if (!button || !text) return;
+
+  button.disabled = selectedStudentIds.size === 0;
+
+  text.innerText = selectedStudentIds.size
+    ? selectedStudentIds.size + " murid dipilih untuk cetakan."
+    : (count
+        ? count + " murid dipaparkan. Pilih murid untuk dicetak."
+        : "Tiada murid untuk dipaparkan.");
+}
+
+
+function printFilteredStudents() {
+
+  const studentsToPrint =
+    allStudents.filter(function(student) {
+      return selectedStudentIds.has(
+        String(student.id || "")
+      );
+    });
+
+  if (!studentsToPrint.length) {
+    alert(
+      "Sila pilih sekurang-kurangnya seorang murid dahulu."
+    );
+    return;
+  }
+
+  const schoolName =
+    String(
+      window.SATS_SCHOOL_NAME ||
+      getCurrentSchoolNameForPrint() ||
+      "SATS"
+    ).trim();
+
+  const schoolLogo =
+    String(
+      window.SATS_SCHOOL_LOGO ||
+      getCurrentSchoolLogoForPrint() ||
+      ""
+    ).trim();
+
+  const cards =
+    studentsToPrint.map(function(student) {
+
+      const qrUrl =
+        "https://quickchart.io/qr?text=" +
+        encodeURIComponent(
+          String(student.id || "")
+        ) +
+        "&size=300";
+
+      const logoHtml =
+        schoolLogo
+          ? '<img class="school-logo" src="' +
+              escapeAttribute(schoolLogo) +
+              '" alt="Logo">'
+          : "";
+
+      return (
+        '<div class="student-card">' +
+
+          '<div class="school-header">' +
+            logoHtml +
+            '<div class="school-name">' +
+              escapeHtml(schoolName) +
+            '</div>' +
+          '</div>' +
+
+          '<div class="card-title">KAD MURID</div>' +
+
+          '<div class="student-info">' +
+            '<div class="student-name">' +
+              escapeHtml(student.name || "") +
+            '</div>' +
+
+            '<div class="student-row">' +
+              '<strong>ID:</strong> ' +
+              escapeHtml(student.id || "") +
+            '</div>' +
+
+            '<div class="student-row">' +
+              '<strong>KELAS:</strong> ' +
+              escapeHtml(student.className || "") +
+            '</div>' +
+
+            '<img class="qr" src="' +
+              qrUrl +
+              '" alt="QR Code">' +
+          '</div>' +
+
+          '<div class="footer">' +
+            'Sistem Kehadiran Murid • SATS' +
+          '</div>' +
+
+        '</div>'
+      );
+
+    }).join("");
+
+
+  /*
+   * IMPORTANT FOR iPHONE/iPAD SAFARI
+   *
+   * Do not print from a hidden iframe.
+   * iOS Safari may ignore window.print() from an
+   * invisible iframe or silently do nothing.
+   *
+   * Instead, open a real print document in a new tab/window
+   * directly from the button click.
+   */
+
+  const printWindow =
+    window.open(
+      "",
+      "_blank"
+    );
+
+  if (!printWindow) {
+
+    alert(
+      "Safari menyekat tetingkap cetakan. " +
+      "Sila benarkan pop-up untuk SATS dan cuba semula."
+    );
+
+    return;
+  }
+
+
+  const printHtml =
+    '<!doctype html>' +
+    '<html lang="ms">' +
+    '<head>' +
+      '<meta charset="UTF-8">' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>Kad Murid - SATS</title>' +
+
+      '<style>' +
+
+        '@page {' +
+          'size:A4 portrait;' +
+          'margin:8mm;' +
+        '}' +
+
+        '* {' +
+          'box-sizing:border-box;' +
+        '}' +
+
+        'html,body {' +
+          'margin:0;' +
+          'padding:0;' +
+          'background:#fff;' +
+          'font-family:Arial,sans-serif;' +
+        '}' +
+
+        'body {' +
+          'display:grid;' +
+          'grid-template-columns:repeat(3,54mm);' +
+          'gap:5mm;' +
+          'align-content:start;' +
+        '}' +
+
+        '.student-card {' +
+          'width:54mm;' +
+          'height:86mm;' +
+          'border:1.5px solid #1f2937;' +
+          'border-radius:4mm;' +
+          'padding:4mm;' +
+          'background:#fff;' +
+          'break-inside:avoid;' +
+          'page-break-inside:avoid;' +
+          'overflow:hidden;' +
+          'display:flex;' +
+          'flex-direction:column;' +
+          'justify-content:space-between;' +
+        '}' +
+
+        '.school-header {' +
+          'height:12mm;' +
+          'min-height:12mm;' +
+          'display:flex;' +
+          'align-items:center;' +
+          'gap:4mm;' +
+          'border-bottom:1px solid #d1d5db;' +
+          'padding-bottom:2mm;' +
+          'margin-bottom:2mm;' +
+          'overflow:hidden;' +
+        '}' +
+
+        '.school-logo {' +
+          'width:10mm;' +
+          'height:10mm;' +
+          'object-fit:contain;' +
+          'flex:0 0 10mm;' +
+        '}' +
+
+        '.school-name {' +
+          'flex:1;' +
+          'font-size:10px;' +
+          'font-weight:800;' +
+          'line-height:1.15;' +
+          'max-height:24px;' +
+          'overflow:hidden;' +
+        '}' +
+
+        '.card-title {' +
+          'font-size:7px;' +
+          'font-weight:700;' +
+          'letter-spacing:.6px;' +
+          'text-align:center;' +
+          'margin-bottom:1mm;' +
+        '}' +
+
+        '.student-info {' +
+          'flex:1;' +
+          'display:flex;' +
+          'flex-direction:column;' +
+          'align-items:center;' +
+          'justify-content:center;' +
+          'text-align:center;' +
+        '}' +
+
+        '.student-name {' +
+          'font-size:13px;' +
+          'font-weight:800;' +
+          'line-height:1.12;' +
+          'margin-bottom:3mm;' +
+          'text-transform:uppercase;' +
+        '}' +
+
+        '.student-row {' +
+          'font-size:8.5px;' +
+          'line-height:1.45;' +
+        '}' +
+
+        '.qr {' +
+          'width:22mm;' +
+          'height:22mm;' +
+          'object-fit:contain;' +
+          'margin-top:3mm;' +
+        '}' +
+
+        '.footer {' +
+          'border-top:1px solid #d1d5db;' +
+          'margin-top:1mm;' +
+          'padding-top:1.5mm;' +
+          'font-size:6.5px;' +
+          'text-align:center;' +
+        '}' +
+
+        '.print-message {' +
+          'font-family:Arial,sans-serif;' +
+          'padding:20px;' +
+          'text-align:center;' +
+        '}' +
+
+        '@media print {' +
+          '.print-message {' +
+            'display:none;' +
+          '}' +
+        '}' +
+
+      '</style>' +
+    '</head>' +
+
+    '<body>' +
+      '<div class="print-message">' +
+        'Menyiapkan cetakan Kad Murid...' +
+      '</div>' +
+      cards +
+    '</body>' +
+    '</html>';
+
+
+  try {
+
+    printWindow.document.open();
+    printWindow.document.write(
+      printHtml
+    );
+    printWindow.document.close();
+
+  }
+
+  catch(error) {
+
+    try {
+      printWindow.close();
+    } catch(e) {}
+
+    alert(
+      "Cetakan tidak dapat disediakan. " +
+      "Sila cuba semula."
+    );
+
+    console.error(
+      "SATS print error:",
+      error
+    );
+
+    return;
+  }
+
+
+  const runPrint =
+    function() {
+
+      let printed =
+        false;
+
+      const doPrint =
+        function() {
+
+          if (printed) return;
+
+          printed =
+            true;
+
+          try {
+
+            printWindow.focus();
+
+            /*
+             * iOS Safari can ignore print() if images are
+             * still loading. We wait for the browser to
+             * finish rendering first.
+             */
+            setTimeout(
+              function() {
+
+                try {
+
+                  printWindow.print();
+
+                }
+
+                catch(error) {
+
+                  console.error(
+                    "SATS print() error:",
+                    error
+                  );
+
+                  alert(
+                    "Safari tidak dapat membuka paparan cetakan. " +
+                    "Cuba gunakan butang Print/Share pada halaman ini."
+                  );
+
+                }
+
+              },
+              350
+            );
+
+          }
+
+          catch(error) {
+
+            console.error(
+              "SATS print window error:",
+              error
+            );
+
+          }
+
+        };
+
+
+      const images =
+        printWindow.document
+          .images;
+
+      if (!images.length) {
+
+        doPrint();
+        return;
+
+      }
+
+
+      let remaining =
+        images.length;
+
+      const imageDone =
+        function() {
+
+          remaining--;
+
+          if (
+            remaining <= 0
+          ) {
+            doPrint();
+          }
+
+        };
+
+
+      Array.from(
+        images
+      ).forEach(
+        function(image) {
+
+          if (
+            image.complete
+          ) {
+
+            imageDone();
+
+          } else {
+
+            image.addEventListener(
+              "load",
+              imageDone,
+              { once:true }
+            );
+
+            image.addEventListener(
+              "error",
+              imageDone,
+              { once:true }
+            );
+
+          }
+
+        }
+      );
+
+
+      /*
+       * Safety fallback in case an external image request
+       * never fires its load/error event.
+       */
+      setTimeout(
+        function() {
+          doPrint();
+        },
+        4000
+      );
+
+    };
+
+
+  if (
+    printWindow.document.readyState ===
+    "complete"
+  ) {
+
+    runPrint();
+
+  } else {
+
+    printWindow.addEventListener(
+      "load",
+      runPrint,
+      { once:true }
+    );
+
+  }
+
+}
+
+
+/* =================================================
+   DELETE STUDENT
+   ================================================= */
+
+function openEditStudent(studentId) {
+
+  const student =
+    allStudents.find(function(item) {
+      return String(item.id || "") ===
+        String(studentId || "");
+    });
+
+  if (!student) {
+    alert("Murid tidak dijumpai.");
+    return;
+  }
+
+  const panel =
+    document.getElementById("editStudentPanel");
+
+  const originalId =
+    document.getElementById("editStudentOriginalId");
+
+  const nameInput =
+    document.getElementById("editStudentName");
+
+  const classSelect =
+    document.getElementById("editStudentClass");
+
+  if (!panel || !originalId ||
+      !nameInput || !classSelect) {
+    alert("Borang Edit Murid tidak dijumpai.");
+    return;
+  }
+
+  originalId.value = String(student.id || "");
+  nameInput.value = String(student.name || "");
+
+  classSelect.innerHTML =
+    '<option value="">Pilih Kelas</option>' +
+    allClasses.map(function(className) {
+      return '<option value="' +
+        escapeAttribute(className) +
+        '">' +
+        escapeHtml(className) +
+        '</option>';
+    }).join("");
+
+  classSelect.value =
+    String(student.className || "");
+
+  panel.classList.add("active");
+
+  panel.scrollIntoView({
+    behavior: "smooth",
+    block: "center"
+  });
+}
+
+
+function cancelEditStudent() {
+
+  const panel =
+    document.getElementById("editStudentPanel");
+
+  if (panel) {
+    panel.classList.remove("active");
+  }
+}
+
+
+function saveEditedStudent() {
+
+  const originalId =
+    document.getElementById(
+      "editStudentOriginalId"
+    ).value.trim();
+
+  const name =
+    document.getElementById(
+      "editStudentName"
+    ).value.trim();
+
+  const className =
+    document.getElementById(
+      "editStudentClass"
+    ).value.trim();
+
+  if (!originalId || !name || !className) {
+    alert(
+      "Sila lengkapkan nama dan kelas murid."
+    );
+    return;
+  }
+
+  const buttons =
+    document.querySelectorAll(
+      "#editStudentPanel button"
+    );
+
+  buttons.forEach(function(button) {
+    button.disabled = true;
+  });
+
+  const url =
+    SATS_API +
+    "?action=updateStudent" +
+    "&originalId=" +
+    encodeURIComponent(originalId) +
+    "&name=" +
+    encodeURIComponent(name) +
+    "&className=" +
+    encodeURIComponent(className);
+
+  callSATS(
+    url,
+    function(data) {
+
+      buttons.forEach(function(button) {
+        button.disabled = false;
+      });
+
+      if (data && data.success) {
+
+        alert(
+          "✓ Data murid berjaya dikemaskini."
+        );
+
+        cancelEditStudent();
+        loadStudents();
+
+      } else {
+
+        alert(
+          "✕ " +
+          (
+            (data && data.message) ||
+            "Gagal mengemaskini murid."
+          )
+        );
+      }
+    }
+  );
+}
+
+
+function deleteStudentFromApp(
+  studentId
+) {
+
+
+  const confirmed =
+    confirm(
+      "Adakah anda pasti mahu memadam murid " +
+      studentId +
+      "?"
+    );
+
+
+  if (!confirmed) {
+
+    return;
+
+  }
+
+
+  const url =
+    SATS_API +
+    "?action=deleteStudent" +
+    "&studentId=" +
+    encodeURIComponent(
+      studentId
+    );
+
+
+  callSATS(
+    url,
+    function(data) {
+
+      if (
+        data.success
+      ) {
+
+        alert(
+          "✓ Murid berjaya dipadam."
+        );
+
+
+        loadStudents();
+
+      }
+
+      else {
+
+        alert(
+          "✕ " +
+          (
+            data.message ||
+            "Gagal memadam murid."
+          )
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+
+/* =================================================
+   MURID BERISIKO
+   ================================================= */
+
+function setRiskDefaultDates() {
+  const d=document.getElementById("dashboardDate");
+  const today=(d && d.value) || getDashboardTodayDate();
+  const end=document.getElementById("riskEndDate");
+  const start=document.getElementById("riskStartDate");
+  if(end && !end.value) end.value=today;
+  if(start && !start.value) {
+    const x=new Date(today+"T00:00:00");
+    x.setDate(x.getDate()-29);
+    start.value=x.toISOString().slice(0,10);
+  }
+}
+
+function populateRiskClasses(classes) {
+  const s=document.getElementById("riskClass");
+  if(!s) return;
+  const current=s.value;
+  const values=Array.isArray(classes)?classes:[];
+  s.innerHTML='<option value="">Semua Kelas</option>'+values.map(function(c){
+    return '<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>';
+  }).join("");
+  if(current && values.indexOf(current)>=0) s.value=current;
+}
+
+function loadAtRiskStudents() {
+  setRiskDefaultDates();
+  const start=document.getElementById("riskStartDate").value;
+  const end=document.getElementById("riskEndDate").value;
+  const cls=document.getElementById("riskClass").value;
+  const threshold=document.getElementById("riskThreshold").value;
+  const body=document.getElementById("riskStudentsBody");
+  const summary=document.getElementById("riskSummary");
+
+  if(!start || !end) { alert("Sila pilih tarikh mula dan tarikh akhir."); return; }
+  if(start>end) { alert("Tarikh mula tidak boleh melebihi tarikh akhir."); return; }
+
+  body.innerHTML='<tr><td colspan="9" style="padding:15px;text-align:center;">Menyemak...</td></tr>';
+
+  callSATS(SATS_API+"?action=getAtRiskStudents"+
+    "&startDate="+encodeURIComponent(start)+
+    "&endDate="+encodeURIComponent(end)+
+    "&className="+encodeURIComponent(cls)+
+    "&threshold="+encodeURIComponent(threshold), function(data) {
+
+      if(!data || !data.success) {
+        body.innerHTML='<tr><td colspan="9" style="padding:15px;text-align:center;color:#991b1b;">'+
+          escapeHtml((data&&data.message)||"Gagal mendapatkan senarai.")+"</td></tr>";
+        return;
+      }
+      populateRiskClasses(data.allClasses||[]);
+      renderAtRiskStudents(data);
+    });
+}
+
+function renderAtRiskStudents(data) {
+
+  const body =
+    document.getElementById("riskStudentsBody");
+
+  const summary =
+    document.getElementById("riskSummary");
+
+  const students =
+    Array.isArray(data.students)
+      ? data.students
+      : [];
+
+  summary.innerHTML =
+    '<div style="padding:10px;border-radius:8px;background:#f3f4f6;">' +
+    "<strong>" + students.length + "</strong> murid di bawah " +
+    Number(data.threshold || 0) + "%" +
+    " &nbsp;|&nbsp; Hari Persekolahan: " +
+    Number(data.schoolDays || 0) +
+    " &nbsp;|&nbsp; Cuti/Bukan Persekolahan: " +
+    Number(data.nonSchoolingDays || 0) +
+    "</div>";
+
+  if (!students.length) {
+
+    body.innerHTML =
+      '<tr><td colspan="9" style="padding:15px;text-align:center;">' +
+      "✅ Tiada murid di bawah ambang yang dipilih." +
+      "</td></tr>";
+
+    return;
+  }
+
+  body.innerHTML =
+    students.map(function(student, index) {
+
+      const level =
+        student.level === "Kritikal"
+          ? "🔴 Kritikal"
+          : "⚠️ Perlu Perhatian";
+
+      return (
+        "<tr>" +
+
+        "<td>" +
+        (index + 1) +
+        "</td>" +
+
+        "<td><strong>" +
+        escapeHtml(student.name) +
+        "</strong><br><small>" +
+        escapeHtml(student.id) +
+        "</small></td>" +
+
+        "<td>" +
+        escapeHtml(student.className) +
+        "</td>" +
+
+        "<td>" +
+        Number(student.schoolDays || 0) +
+        "</td>" +
+
+        "<td>" +
+        Number(student.present || 0) +
+        "</td>" +
+
+        "<td>" +
+        Number(student.absent || 0) +
+        "</td>" +
+
+        "<td><strong>" +
+        Number(student.percentage || 0) +
+        "%</strong></td>" +
+
+        "<td>" +
+        level +
+        "</td>" +
+
+        '<td>' +
+        '<button type="button" class="calendar-action-button" ' +
+        'onclick="openAtRiskStudentDetail(\'' +
+        encodeURIComponent(String(student.id || "")) +
+        '\')">' +
+        '📋 Lihat' +
+        '</button>' +
+        "</td>" +
+
+        "</tr>"
+      );
+
+    }).join("");
+
+}
+
+
+function openAtRiskStudentDetail(studentId) {
+
+  try {
+    studentId = decodeURIComponent(studentId);
+  } catch (e) {}
+
+  setRiskDefaultDates();
+
+  const startDate =
+    document.getElementById("riskStartDate").value;
+
+  const endDate =
+    document.getElementById("riskEndDate").value;
+
+  if (!startDate || !endDate) {
+    alert("Sila tetapkan julat tarikh terlebih dahulu.");
+    return;
+  }
+
+  let panel =
+    document.getElementById("riskStudentDetailPanel");
+
+  if (!panel) {
+
+    panel =
+      document.createElement("div");
+
+    panel.id =
+      "riskStudentDetailPanel";
+
+    panel.className =
+      "card";
+
+    panel.style.marginTop =
+      "15px";
+
+    const riskCard =
+      document.getElementById("dashboardRiskCard");
+
+    if (riskCard) {
+      riskCard.appendChild(panel);
+    }
+
+  }
+
+  panel.innerHTML =
+    '<div style="padding:15px;text-align:center;">' +
+    "⏳ Memuatkan analisis murid..." +
+    "</div>";
+
+  callSATS(
+    SATS_API +
+    "?action=getStudentAttendanceDetail" +
+    "&studentId=" +
+    encodeURIComponent(studentId) +
+    "&startDate=" +
+    encodeURIComponent(startDate) +
+    "&endDate=" +
+    encodeURIComponent(endDate),
+
+    function(data) {
+
+      if (!data || !data.success) {
+
+        panel.innerHTML =
+          '<div style="padding:15px;color:#991b1b;">' +
+          escapeHtml(
+            (data && data.message) ||
+            "Gagal mendapatkan analisis murid."
+          ) +
+          "</div>";
+
+        return;
+      }
+
+      renderAtRiskStudentDetail(
+        panel,
+        data
+      );
+
+    }
+  );
+
+}
+
+
+function renderAtRiskStudentDetail(
+  panel,
+  data
+) {
+
+  const student =
+    data.student || {};
+
+  const records =
+    Array.isArray(data.records)
+      ? data.records
+      : [];
+
+  const absentDates =
+    Array.isArray(data.absentDates)
+      ? data.absentDates
+      : [];
+
+  const schoolDays =
+    Number(data.schoolDays || 0);
+
+  const present =
+    Number(data.present || 0);
+
+  const absent =
+    Number(data.absent || 0);
+
+  const percentage =
+    Number(data.percentage || 0);
+
+  panel.innerHTML =
+    '<div class="report-section-header">' +
+      '<div>' +
+        '<div class="report-section-title">📋 Analisis Individu</div>' +
+        '<div class="report-section-subtitle">' +
+          escapeHtml(student.name || "") +
+          " · " +
+          escapeHtml(student.className || "") +
+          " · " +
+          escapeHtml(student.id || "") +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+        '<button type="button" class="print-button" style="margin:0;" ' +
+          'onclick="printAtRiskStudentDetail()">' +
+          '🖨️ CETAK LAPORAN MURID' +
+        '</button>' +
+        '<button type="button" class="calendar-action-button" ' +
+          'onclick="document.getElementById(\'riskStudentDetailPanel\').remove()">' +
+          '✕ Tutup' +
+        '</button>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="dashboard-grid" style="margin-top:12px;">' +
+
+      '<div class="stat">' +
+        '<div class="stat-label">Hari Persekolahan</div>' +
+        '<div class="stat-number">' + schoolDays + '</div>' +
+      '</div>' +
+
+      '<div class="stat">' +
+        '<div class="stat-label">Hadir</div>' +
+        '<div class="stat-number">' + present + '</div>' +
+      '</div>' +
+
+      '<div class="stat">' +
+        '<div class="stat-label">Tidak Hadir</div>' +
+        '<div class="stat-number">' + absent + '</div>' +
+      '</div>' +
+
+      '<div class="stat">' +
+        '<div class="stat-label">Kehadiran</div>' +
+        '<div class="stat-number">' + percentage + '%</div>' +
+      '</div>' +
+
+    '</div>' +
+
+    '<div style="margin-top:15px;">' +
+      '<strong>Tarikh Tidak Hadir</strong>' +
+      '<div style="margin-top:8px;">' +
+        (
+          absentDates.length
+            ? absentDates.map(function(item) {
+                return (
+                  '<span class="calendar-badge non-schooling" ' +
+                  'style="margin:3px;">' +
+                  escapeHtml(formatCalendarDate(item.date)) +
+                  '</span>'
+                );
+              }).join("")
+            : '<span style="color:#166534;">Tiada rekod tidak hadir.</span>'
+        ) +
+      '</div>' +
+    '</div>' +
+
+    '<div style="overflow-x:auto;margin-top:15px;">' +
+      '<table class="report-table">' +
+        '<thead>' +
+          '<tr><th>Tarikh</th><th>Status</th><th>Kaedah</th><th>Alasan</th><th>Masa</th></tr>' +
+        '</thead>' +
+        '<tbody>' +
+          (
+            records.length
+              ? records.map(function(item) {
+                  return (
+                    "<tr>" +
+                    "<td>" + escapeHtml(formatCalendarDate(item.date)) + "</td>" +
+                    "<td>" + escapeHtml(item.status || "") + "</td>" +
+                    "<td>" + escapeHtml(item.method || "") + "</td>" +
+                    "<td>" + escapeHtml(item.reason || "") + "</td>" +
+                    "<td>" + escapeHtml(item.time || "") + "</td>" +
+                    "</tr>"
+                  );
+                }).join("")
+              : '<tr><td colspan="5">Tiada rekod.</td></tr>'
+          ) +
+        '</tbody>' +
+      '</table>' +
+    '</div>';
+
+  window.currentAtRiskStudentDetail =
+    data;
+
+}
+
+
+function printAtRiskStudentDetail() {
+
+  const data =
+    window.currentAtRiskStudentDetail;
+
+  if (!data || !data.student) {
+    alert("Sila buka analisis murid dahulu.");
+    return;
+  }
+
+  const student =
+    data.student;
+
+  const records =
+    Array.isArray(data.records)
+      ? data.records
+      : [];
+
+  const rows =
+    records.map(function(item, index) {
+      return (
+        "<tr>" +
+        "<td>" + (index + 1) + "</td>" +
+        "<td>" + escapeHtml(formatCalendarDate(item.date)) + "</td>" +
+        "<td>" + escapeHtml(item.status || "") + "</td>" +
+        "<td>" + escapeHtml(item.time || "") + "</td>" +
+        "</tr>"
+      );
+    }).join("");
+
+  const html =
+    '<div style="font-family:Arial,sans-serif;padding:20px;">' +
+      '<h2 style="margin:0 0 5px;">LAPORAN KEHADIRAN INDIVIDU</h2>' +
+      '<div>' +
+        escapeHtml(student.name || "") +
+        " · " +
+        escapeHtml(student.className || "") +
+        " · " +
+        escapeHtml(student.id || "") +
+      '</div>' +
+      '<div style="margin-top:8px;">' +
+        "Tempoh: " +
+        escapeHtml(formatCalendarDate(data.startDate)) +
+        " – " +
+        escapeHtml(formatCalendarDate(data.endDate)) +
+      '</div>' +
+
+      '<table style="width:100%;border-collapse:collapse;margin-top:15px;">' +
+        '<tr>' +
+          '<th style="border:1px solid #999;padding:8px;">Hari Persekolahan</th>' +
+          '<th style="border:1px solid #999;padding:8px;">Hadir</th>' +
+          '<th style="border:1px solid #999;padding:8px;">Tidak Hadir</th>' +
+          '<th style="border:1px solid #999;padding:8px;">Kehadiran</th>' +
+        '</tr>' +
+        '<tr>' +
+          '<td style="border:1px solid #999;padding:8px;text-align:center;">' + Number(data.schoolDays || 0) + '</td>' +
+          '<td style="border:1px solid #999;padding:8px;text-align:center;">' + Number(data.present || 0) + '</td>' +
+          '<td style="border:1px solid #999;padding:8px;text-align:center;">' + Number(data.absent || 0) + '</td>' +
+          '<td style="border:1px solid #999;padding:8px;text-align:center;"><strong>' + Number(data.percentage || 0) + '%</strong></td>' +
+        '</tr>' +
+      '</table>' +
+
+      '<table style="width:100%;border-collapse:collapse;margin-top:15px;">' +
+        '<thead><tr>' +
+          '<th style="border:1px solid #999;padding:7px;">Bil</th>' +
+          '<th style="border:1px solid #999;padding:7px;">Tarikh</th>' +
+          '<th style="border:1px solid #999;padding:7px;">Status</th>' +
+          '<th style="border:1px solid #999;padding:7px;">Masa</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>' +
+    '</div>';
+
+  const printWindow =
+    window.open("", "_blank");
+
+  if (!printWindow) {
+    alert("Sila benarkan pop-up untuk mencetak laporan.");
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(
+    "<html><head><title>Laporan Kehadiran Individu</title></head><body>" +
+    html +
+    "</body></html>"
+  );
+  printWindow.document.close();
+
+  printWindow.focus();
+
+  setTimeout(function() {
+    printWindow.print();
+  }, 300);
+
+}
+
+
+/* =================================================
+   SCANNER
+   ================================================= */
+
+
+/* =================================================
+   SCANNER AUTO-CONTINUE
+   ================================================= */
+
+let scannerToastTimer = null;
+let lastScannedStudentId = "";
+let lastScannedAt = 0;
+
+function showScannerToast(message, type) {
+
+  let toast =
+    document.getElementById("satsScannerToast");
+
+  if (!toast) {
+
+    toast =
+      document.createElement("div");
+
+    toast.id =
+      "satsScannerToast";
+
+    toast.style.cssText =
+      "position:fixed;left:50%;top:18%;transform:translate(-50%,-50%);" +
+      "z-index:99999;min-width:280px;max-width:90vw;" +
+      "padding:14px 18px;border-radius:12px;" +
+      "font-size:18px;font-weight:700;text-align:center;" +
+      "box-shadow:0 8px 30px rgba(0,0,0,.18);" +
+      "pointer-events:none;transition:opacity .2s ease;";
+
+    document.body.appendChild(toast);
+
+  }
+
+  toast.textContent =
+    message;
+
+  toast.style.background =
+    type === "error"
+      ? "#fee2e2"
+      : "#dcfce7";
+
+  toast.style.color =
+    type === "error"
+      ? "#991b1b"
+      : "#166534";
+
+  toast.style.opacity =
+    "1";
+
+  clearTimeout(
+    scannerToastTimer
+  );
+
+  scannerToastTimer =
+    setTimeout(function() {
+
+      toast.style.opacity =
+        "0";
+
+    }, 1200);
+
+}
+
+
+function scannerPlaySuccessBeep() {
+
+  try {
+
+    const AudioContext =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContext) return;
+
+    const context =
+      new AudioContext();
+
+    const oscillator =
+      context.createOscillator();
+
+    const gain =
+      context.createGain();
+
+    oscillator.frequency.value =
+      880;
+
+    oscillator.type =
+      "sine";
+
+    gain.gain.value =
+      0.06;
+
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+
+    oscillator.start();
+
+    setTimeout(function() {
+
+      oscillator.stop();
+
+      if (
+        context.state !==
+        "closed"
+      ) {
+        context.close();
+      }
+
+    }, 100);
+
+  } catch (error) {
+    /* Audio is optional. */
+  }
+
+}
+
+
+function scannerCanProcess(studentId) {
+
+  const now =
+    Date.now();
+
+  /*
+   * Prevent the same QR from being recorded repeatedly
+   * while the QR is still in front of the camera.
+   */
+  if (
+    studentId &&
+    studentId ===
+    lastScannedStudentId &&
+    now - lastScannedAt < 2500
+  ) {
+    return false;
+  }
+
+  lastScannedStudentId =
+    studentId || "";
+
+  lastScannedAt =
+    now;
+
+  return true;
+
+}
+
+
+function scannerContinue() {
+
+  /*
+   * The existing scanner pauses after detecting a QR
+   * while SATS processes the request. Resume the same
+   * camera instance instead of stopping/restarting it.
+   */
+  setTimeout(function() {
+
+    processingScan = false;
+
+    try {
+
+      if (
+        scanner &&
+        typeof scanner.resume ===
+        "function"
+      ) {
+
+        scanner.resume();
+
+        document
+          .getElementById("scannerStatus")
+          .innerText =
+          "📷 Kamera sedia. Sila imbas QR seterusnya.";
+
+        return;
+
+      }
+
+    } catch (error) {
+
+      console.warn(
+        "Gagal resume scanner:",
+        error
+      );
+
+    }
+
+    /*
+     * Fallback only if the scanner instance no longer
+     * exists.
+     */
+    try {
+
+      if (
+        typeof startScanner ===
+        "function" &&
+        !scannerRunning
+      ) {
+        startScanner();
+      }
+
+    } catch (error) {}
+
+  }, 250);
+
+}
+
+
+
+let scannerFacingMode =
+  "environment";
+
+
+function setScannerCameraControl(
+  facingMode
+) {
+
+  scannerFacingMode =
+    facingMode === "user"
+      ? "user"
+      : "environment";
+
+  const select =
+    document.getElementById(
+      "cameraFacing"
+    );
+
+  if (select) {
+    select.value =
+      scannerFacingMode;
+  }
+
+}
+
+
+function changeScannerCamera(
+  facingMode
+) {
+
+  setScannerCameraControl(
+    facingMode
+  );
+
+  if (!scannerRunning) {
+    return;
+  }
+
+  switchScannerCamera(
+    scannerFacingMode
+  );
+
+}
+
+
+function toggleScannerCamera() {
+
+  const next =
+    scannerFacingMode === "environment"
+      ? "user"
+      : "environment";
+
+  setScannerCameraControl(
+    next
+  );
+
+  if (!scannerRunning) {
+    return;
+  }
+
+  switchScannerCamera(
+    next
+  );
+
+}
+
+
+function switchScannerCamera(
+  facingMode
+) {
+
+  if (!scannerRunning) {
+    return;
+  }
+
+  const oldScanner =
+    scanner;
+
+  scannerRunning =
+    false;
+
+  processingScan =
+    true;
+
+  document
+    .getElementById(
+      "scannerStatus"
+    )
+    .innerText =
+    "🔄 Menukar kamera...";
+
+  try {
+
+    oldScanner
+      .stop()
+      .then(
+        function() {
+
+          try {
+            oldScanner.clear();
+          } catch(error) {}
+
+          scanner =
+            null;
+
+          startScanner();
+
+        }
+      )
+      .catch(
+        function(error) {
+
+          console.warn(
+            "Stop kamera gagal:",
+            error
+          );
+
+          try {
+            oldScanner.clear();
+          } catch(error) {}
+
+          scanner =
+            null;
+
+          startScanner();
+
+        }
+      );
+
+  }
+
+  catch(error) {
+
+    console.warn(
+      "Tukar kamera gagal:",
+      error
+    );
+
+    scanner =
+      null;
+
+    startScanner();
+
+  }
+
+}
+
+
+function startScanner() {
+
+  setScannerCameraControl(
+    scannerFacingMode
+  );
+
+
+  if (
+    scannerRunning
+  ) {
+
+    return;
+
+  }
+
+
+  processingScan =
+    false;
+
+
+  document
+    .getElementById(
+      "scannerStatus"
+    )
+    .innerText =
+    "Membuka kamera...";
+
+
+  try {
+
+    scanner =
+      new Html5Qrcode(
+        "reader"
+      );
+
+  }
+
+  catch(error) {
+
+    console.error(error);
+
+    return;
+
+  }
+
+
+  scanner.start(
+
+    {
+      facingMode:
+        scannerFacingMode
+    },
+
+    {
+
+      fps: 10,
+
+      qrbox: {
+
+        width: 250,
+
+        height: 250
+
+      }
+
+    },
+
+    function(decodedText) {
+
+
+      if (
+        processingScan
+      ) {
+
+        return;
+
+      }
+
+
+      processingScan =
+        true;
+
+
+      try {
+
+        scanner.pause(
+          true
+        );
+
+      }
+
+      catch(error) {}
+
+
+      processScan(
+        decodedText
+      );
+
+    },
+
+    function(errorMessage) {
+
+      // Normal QR scanner errors
+      // are intentionally ignored.
+
+    }
+
+  )
+
+  .then(
+    function() {
+
+      scannerRunning =
+        true;
+
+      processingScan =
+        false;
+
+
+      document
+        .getElementById(
+          "scannerStatus"
+        )
+        .innerText =
+        "Kamera sedia. Sila imbas QR.";
+
+    }
+  )
+
+  .catch(
+    function(error) {
+
+      console.error(
+        error
+      );
+
+
+      scannerRunning =
+        false;
+
+
+      document
+        .getElementById(
+          "scannerStatus"
+        )
+        .innerText =
+        "Kamera tidak dapat dibuka. Sila benarkan akses kamera.";
+
+    }
+  );
+
+}
+
+
+/* =================================================
+   PROCESS QR SCAN
+   ================================================= */
+
+function processScan(
+  qrCode
+) {
+
+
+  document
+    .getElementById(
+      "scannerStatus"
+    )
+    .innerText =
+    "⏳ Menyemak murid...";
+
+
+  const result =
+    document.getElementById(
+      "scanResult"
+    );
+
+
+  result.style.display =
+    "block";
+
+
+  const url =
+    SATS_API +
+    "?action=scan" +
+    "&qr=" +
+    encodeURIComponent(
+      qrCode
+    );
+
+
+  callSATS(
+    url,
+    function(data) {
+
+      displayScanResult(
+        data
+      );
+
+    }
+  );
+
+}
+
+
+/* =================================================
+   DISPLAY SCAN RESULT
+   ================================================= */
+
+function displayScanResult(
+  data
+) {
+
+
+  const result =
+    document.getElementById(
+      "scanResult"
+    );
+
+
+  result.style.display =
+    "block";
+
+
+  if (
+    data.student
+  ) {
+
+    showStudent(
+      data.student
+    );
+
+  }
+
+
+  if (
+    data.success
+  ) {
+
+
+    setAttendanceStatus(
+
+      "✓ HADIR",
+
+      "success"
+
+    );
+
+
+    document
+      .getElementById(
+        "datetime"
+      )
+      .innerText =
+
+        data.date +
+        " • " +
+        data.day +
+        " • " +
+        data.time;
+
+
+    document
+      .getElementById(
+        "scannerStatus"
+      )
+      .innerText =
+      "Kehadiran berjaya direkodkan.";
+      scannerPlaySuccessBeep();
+
+      showScannerToast(
+        "✓ " +
+        ((data.student && data.student.name) || "Kehadiran berjaya"),
+        "success"
+      );
+
+      scannerContinue();
+
+
+
+
+    return;
+
+  }
+
+
+  if (
+    data.type ===
+    "duplicate"
+  ) {
+
+
+    setAttendanceStatus(
+
+      "⚠ SUDAH DIREKOD",
+
+      "warning"
+
+    );
+
+
+    document
+      .getElementById(
+        "datetime"
+      )
+      .innerText =
+      "Scan pertama: " +
+      (
+        data.existingTime ||
+        "-"
+      );
+
+
+    document
+      .getElementById(
+        "scannerStatus"
+      )
+      .innerText =
+      "Murid ini sudah mempunyai rekod hari ini.";
+      showScannerToast(
+        "⚠ " +
+        ((data.student && data.student.name) || "Sudah direkod"),
+        "success"
+      );
+
+      scannerContinue();
+
+
+
+
+    return;
+
+  }
+
+
+  if (
+    data.type ===
+    "not_found"
+  ) {
+
+
+    document
+      .getElementById(
+        "studentName"
+      )
+      .innerText =
+      "Murid Tidak Dijumpai";
+
+
+    document
+      .getElementById(
+        "studentClass"
+      )
+      .innerText =
+      "";
+
+
+    document
+      .getElementById(
+        "studentId"
+      )
+      .innerText =
+      "QR: " +
+      (
+        data.qrCode ||
+        ""
+      );
+
+
+    setAttendanceStatus(
+
+      "✕ QR TIDAK SAH",
+
+      "error"
+
+    );
+
+
+    document
+      .getElementById(
+        "scannerStatus"
+      )
+      .innerText =
+      "QR tidak terdapat dalam Data Murid.";
+      showScannerToast(
+        "✕ QR tidak sah",
+        "error"
+      );
+
+      scannerContinue();
+
+
+
+
+    return;
+
+  }
+
+
+  setAttendanceStatus(
+
+    "✕ " +
+    (
+      data.message ||
+      "Ralat sistem SATS."
+    ),
+
+    "error"
+
+  );
+
+
+  document
+    .getElementById(
+      "scannerStatus"
+    )
+    .innerText =
+    "Ralat berlaku.";
+
+  showScannerToast(
+    "✕ " +
+    (data.message || "Ralat sistem SATS."),
+    "error"
+  );
+
+  scannerContinue();
+
+}
+
+
+/* =================================================
+   SHOW STUDENT
+   ================================================= */
+
+function showStudent(
+  student
+) {
+
+
+  document
+    .getElementById(
+      "studentName"
+    )
+    .innerText =
+    student.name ||
+    "";
+
+
+  document
+    .getElementById(
+      "studentClass"
+    )
+    .innerText =
+    student.className
+      ? "Kelas " +
+        student.className
+      : "";
+
+
+  document
+    .getElementById(
+      "studentId"
+    )
+    .innerText =
+    student.id
+      ? "ID: " +
+        student.id
+      : "";
+
+
+  const profile =
+    document.getElementById(
+      "profile"
+    );
+
+
+  if (
+    student.profile
+  ) {
+
+    profile.src =
+      student.profile;
+
+    profile.style.display =
+      "block";
+
+  }
+
+  else {
+
+    profile.style.display =
+      "none";
+
+  }
+
+}
+
+
+/* =================================================
+   ATTENDANCE STATUS
+   ================================================= */
+
+function setAttendanceStatus(
+  text,
+  type
+) {
+
+
+  const element =
+    document.getElementById(
+      "attendanceStatus"
+    );
+
+
+  element.innerText =
+    text;
+
+
+  element.className =
+    "attendance-status " +
+    type;
+
+}
+
+
+/* =================================================
+   RESTART SCANNER
+   ================================================= */
+
+function restartScanner() {
+
+
+  const result =
+    document.getElementById(
+      "scanResult"
+    );
+
+
+  result.style.display =
+    "none";
+
+
+  document
+    .getElementById(
+      "studentName"
+    )
+    .innerText =
+    "";
+
+
+  document
+    .getElementById(
+      "studentClass"
+    )
+    .innerText =
+    "";
+
+
+  document
+    .getElementById(
+      "studentId"
+    )
+    .innerText =
+    "";
+
+
+  document
+    .getElementById(
+      "datetime"
+    )
+    .innerText =
+    "";
+
+
+  document
+    .getElementById(
+      "attendanceStatus"
+    )
+    .innerText =
+    "";
+
+
+  document
+    .getElementById(
+      "profile"
+    )
+    .style.display =
+    "none";
+
+
+  processingScan =
+    false;
+
+
+  stopScanner();
+
+
+  setTimeout(
+    function() {
+
+      startScanner();
+
+    },
+
+    300
+
+  );
+
+}
+
+
+/* =================================================
+   STOP SCANNER
+   ================================================= */
+
+function stopScanner() {
+
+
+  if (
+    scanner
+  ) {
+
+    try {
+
+      scanner.stop()
+        .then(
+          function() {
+
+            try {
+
+              scanner.clear();
+
+            }
+
+            catch(error) {}
+
+          }
+        )
+        .catch(
+          function() {
+
+            try {
+
+              scanner.clear();
+
+            }
+
+            catch(error) {}
+
+          }
+        );
+
+    }
+
+    catch(error) {
+
+      try {
+
+        scanner.clear();
+
+      }
+
+      catch(error) {}
+
+    }
+
+  }
+
+
+  scanner =
+    null;
+
+
+  scannerRunning =
+    false;
+
+  processingScan =
+    false;
+
+}
+
+
+/* =================================================
+   DASHBOARD
+   ================================================= */
+
+function getDashboardTodayDate() {
+
+  const now =
+    new Date();
+
+  const year =
+    now.getFullYear();
+
+  const month =
+    String(
+      now.getMonth() + 1
+    ).padStart(2, "0");
+
+  const day =
+    String(
+      now.getDate()
+    ).padStart(2, "0");
+
+  return (
+    year +
+    "-" +
+    month +
+    "-" +
+    day
+  );
+}
+
+
+function loadDashboard() {
+
+  setRiskDefaultDates();
+
+  const dateInput =
+    document.getElementById(
+      "dashboardDate"
+    );
+
+  const classSelect =
+    document.getElementById(
+      "dashboardClass"
+    );
+
+  if (
+    dateInput &&
+    !dateInput.value
+  ) {
+    dateInput.value =
+      getDashboardTodayDate();
+  }
+
+  const reportDate =
+    dateInput
+      ? dateInput.value
+      : getDashboardTodayDate();
+
+  const className =
+    classSelect
+      ? classSelect.value
+      : "";
+
+  if (!reportDate) {
+    return;
+  }
+
+  const body =
+    document.getElementById(
+      "dashboardClassBody"
+    );
+
+  if (body) {
+    body.innerHTML =
+      '<tr><td colspan="6" style="padding:15px;text-align:center;">Memuatkan dashboard...</td></tr>';
+  }
+
+  callSATS(
+    SATS_API +
+    "?action=getDashboard" +
+    "&date=" +
+    encodeURIComponent(reportDate) +
+    "&className=" +
+    encodeURIComponent(className),
+
+    function(data) {
+
+      if (
+        !data ||
+        !data.success
+      ) {
+
+        document.getElementById(
+          "totalStudents"
+        ).innerText = "-";
+
+        document.getElementById(
+          "totalPresent"
+        ).innerText = "-";
+
+        document.getElementById(
+          "totalAbsent"
+        ).innerText = "-";
+
+        document.getElementById(
+          "attendancePercent"
+        ).innerText = "-";
+
+        if (body) {
+          body.innerHTML =
+            '<tr><td colspan="6" style="padding:15px;text-align:center;color:#991b1b;">' +
+            escapeHtml(
+              (data &&
+                data.message) ||
+              "Gagal mendapatkan dashboard."
+            ) +
+            "</td></tr>";
+        }
+
+        return;
+      }
+
+      document.getElementById(
+        "totalStudents"
+      ).innerText =
+        Number(
+          data.totalStudents || 0
+        );
+
+      document.getElementById(
+        "totalPresent"
+      ).innerText =
+        Number(
+          data.present || 0
+        );
+
+      document.getElementById(
+        "totalAbsent"
+      ).innerText =
+        Number(
+          data.absent || 0
+        );
+
+      document.getElementById(
+        "attendancePercent"
+      ).innerText =
+        Number(
+          data.percentage || 0
+        ) +
+        "%";
+
+      renderDashboardCalendarStatus(
+        data
+      );
+
+      renderDashboardClasses(
+        data.classes || []
+      );
+
+      populateDashboardClasses(
+        data.allClasses || []
+      );
+
+      populateRiskClasses(
+        data.allClasses || []
+      );
+
+    }
+  );
+
+}
+
+
+function populateDashboardClasses(
+  classes
+) {
+
+  const select =
+    document.getElementById(
+      "dashboardClass"
+    );
+
+  if (!select) return;
+
+  const current =
+    select.value;
+
+  const values =
+    Array.isArray(classes)
+      ? classes
+      : [];
+
+  select.innerHTML =
+    '<option value="">Semua Kelas</option>' +
+    values.map(
+      function(className) {
+        return (
+          '<option value="' +
+          escapeHtml(className) +
+          '">' +
+          escapeHtml(className) +
+          "</option>"
+        );
+      }
+    ).join("");
+
+  if (
+    current &&
+    values.indexOf(current) >= 0
+  ) {
+    select.value =
+      current;
+  }
+
+}
+
+
+function renderDashboardCalendarStatus(
+  data
+) {
+
+  const box =
+    document.getElementById(
+      "dashboardCalendarStatus"
+    );
+
+  if (!box) return;
+
+  if (
+    data.schoolDay === false
+  ) {
+
+    box.innerHTML =
+      '<div style="padding:10px;border-radius:8px;background:#fef3c7;color:#92400e;">' +
+      "🏖️ " +
+      escapeHtml(
+        data.calendarStatus ||
+        "Cuti / Bukan Hari Persekolahan"
+      ) +
+      (
+        data.calendarDescription
+          ? " — " +
+            escapeHtml(
+              data.calendarDescription
+            )
+          : ""
+      ) +
+      "</div>";
+
+    return;
+  }
+
+  box.innerHTML =
+    '<div style="padding:10px;border-radius:8px;background:#dcfce7;color:#166534;">' +
+    "🟢 Hari Persekolahan — data kehadiran dikira untuk tarikh ini." +
+    "</div>";
+
+}
+
+
+function renderDashboardClasses(
+  classes
+) {
+
+  const body =
+    document.getElementById(
+      "dashboardClassBody"
+    );
+
+  if (!body) return;
+
+  if (
+    !Array.isArray(classes) ||
+    !classes.length
+  ) {
+
+    body.innerHTML =
+      '<tr><td colspan="6" style="padding:15px;text-align:center;">Tiada data kelas.</td></tr>';
+
+    return;
+  }
+
+  body.innerHTML =
+    classes.map(
+      function(item, index) {
+
+        return (
+          "<tr>" +
+
+          "<td>" +
+          (index + 1) +
+          "</td>" +
+
+          "<td><strong>" +
+          escapeHtml(
+            item.className
+          ) +
+          "</strong></td>" +
+
+          "<td>" +
+          Number(
+            item.totalStudents || 0
+          ) +
+          "</td>" +
+
+          "<td>" +
+          Number(
+            item.present || 0
+          ) +
+          "</td>" +
+
+          "<td>" +
+          Number(
+            item.absent || 0
+          ) +
+          "</td>" +
+
+          "<td><strong>" +
+          Number(
+            item.percentage || 0
+          ) +
+          "%</strong></td>" +
+
+          "</tr>"
+        );
+
+      }
+    ).join("");
+
+}
+
+
+/* =================================================
+   ESCAPE HTML
+   ================================================= */
+
+function normalizeText(value) {
+
+  return String(
+    value || ""
+  )
+    .trim()
+    .toLowerCase()
+    .replace(
+      /\s+/g,
+      " "
+    );
+
+}
+
+
+function getCurrentSchoolNameForPrint() {
+
+  const input =
+    document.getElementById(
+      "schoolNameSetting"
+    );
+
+  if (
+    input &&
+    String(input.value || "").trim()
+  ) {
+    return String(input.value).trim();
+  }
+
+  const header =
+    document.getElementById(
+      "schoolName"
+    );
+
+  if (
+    header &&
+    String(header.innerText || "").trim()
+  ) {
+    return String(header.innerText).trim();
+  }
+
+  return "SATS";
+}
+
+
+function getCurrentSchoolLogoForPrint() {
+
+  const input =
+    document.getElementById(
+      "schoolLogoSetting"
+    );
+
+  if (
+    input &&
+    String(input.value || "").trim()
+  ) {
+    return String(input.value).trim();
+  }
+
+  const preview =
+    document.getElementById(
+      "schoolLogoPreview"
+    );
+
+  if (
+    preview &&
+    preview.src &&
+    preview.src !==
+      window.location.href
+  ) {
+    return preview.src;
+  }
+
+  const headerLogo =
+    document.getElementById(
+      "schoolLogo"
+    );
+
+  if (
+    headerLogo &&
+    headerLogo.src &&
+    headerLogo.src !==
+      window.location.href
+  ) {
+    return headerLogo.src;
+  }
+
+  return "";
+}
+
+
+function escapeHtml(
+  value
+) {
+
+  return String(
+    value || ""
+  )
+
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+
+    .replace(
+      /</g,
+      "&lt;"
+    )
+
+    .replace(
+      />/g,
+      "&gt;"
+    )
+
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+
+    .replace(
+      /'/g,
+      "&#039;"
+    );
+
+}
+
+
+/* =================================================
+   ESCAPE ATTRIBUTE
+   ================================================= */
+
+function escapeAttribute(
+  value
+) {
+
+  return String(
+    value || ""
+  )
+
+    .replace(
+      /\\/g,
+      "\\\\"
+    )
+
+    .replace(
+      /'/g,
+      "\\'"
+    );
+
+}
+
+
+/* =================================================
+   INITIALISE
+   ================================================= */
+
+document.addEventListener(
+  "DOMContentLoaded",
+  function() {
+
+    ensureSATSConnectionBar();
+    bootSATS();
+
+  }
+);
+
+
+/* =================================================
+   SCHOOL SETTINGS
+   ================================================= */
+
+function loadSchoolSettings() {
+
+  const url =
+    SATS_API +
+    "?action=getSettings";
+
+  callSATS(url, function(data) {
+
+    if (!data || !data.success) {
+      console.warn(
+        "Tetapan tidak dapat dimuat:",
+        data && data.message
+      );
+
+      const nameInput =
+        document.getElementById(
+          "schoolNameSetting"
+        );
+
+      if (nameInput) {
+        nameInput.placeholder =
+          "Tidak dapat menyambung ke SATS";
+      }
+
+      return;
+    }
+
+    const settings =
+      data.settings || {};
+
+    const schoolName =
+      settings.schoolName || "SATS";
+
+    const schoolLogo =
+      settings.schoolLogo || "";
+
+    const nameInput =
+      document.getElementById(
+        "schoolNameSetting"
+      );
+
+    const logoInput =
+      document.getElementById(
+        "schoolLogoSetting"
+      );
+
+    if (nameInput) {
+      nameInput.value = schoolName;
+    }
+
+    if (logoInput) {
+      logoInput.value = schoolLogo;
+    }
+
+    const logoPreview =
+      document.getElementById(
+        "schoolLogoPreview"
+      );
+
+    if (logoPreview) {
+
+      if (schoolLogo) {
+        logoPreview.src = schoolLogo;
+        logoPreview.style.display = "block";
+      } else {
+        logoPreview.removeAttribute("src");
+        logoPreview.style.display = "none";
+      }
+
+    }
+
+    updateSchoolBrand(
+      schoolName,
+      schoolLogo
+    );
+
+    renderSettingsClasses(
+      settings.classes || []
+    );
+
+  });
+}
+
+
+function updateSchoolBrand(
+  schoolName,
+  schoolLogo
+) {
+
+  /*
+   * Keep the current school branding in memory so the
+   * print-card function uses exactly the same values
+   * shown in SATS.
+   */
+  window.SATS_SCHOOL_NAME =
+    schoolName || "SATS";
+
+  window.SATS_SCHOOL_LOGO =
+    schoolLogo || "";
+
+  // Update common text elements without disturbing the rest of the UI.
+  document
+    .querySelectorAll(
+      "[data-school-name]"
+    )
+    .forEach(function(el) {
+      el.textContent =
+        schoolName || "SATS";
+    });
+
+  const headerName =
+    document.getElementById("schoolName");
+
+  if (headerName) {
+    headerName.textContent =
+      schoolName || "SATS";
+  }
+
+  const headerLogo =
+    document.getElementById("schoolLogo");
+
+  if (headerLogo) {
+    if (schoolLogo) {
+      headerLogo.src = schoolLogo;
+      headerLogo.style.display = "block";
+    } else {
+      headerLogo.removeAttribute("src");
+      headerLogo.style.display = "none";
+    }
+  }
+
+  const logo =
+    document.getElementById(
+      "schoolLogoPreview"
+    );
+
+  if (logo) {
+
+    if (schoolLogo) {
+      logo.src = schoolLogo;
+      logo.style.display = "block";
+    } else {
+      logo.removeAttribute("src");
+      logo.style.display = "none";
+    }
+
+  }
+}
+
+
+function saveSchoolNameSetting() {
+
+  const input =
+    document.getElementById(
+      "schoolNameSetting"
+    );
+
+  const schoolName =
+    input
+      ? input.value.trim()
+      : "";
+
+  if (!schoolName) {
+    alert("Sila masukkan nama sekolah.");
+    return;
+  }
+
+  const url =
+    SATS_API +
+    "?action=setSchoolName" +
+    "&schoolName=" +
+    encodeURIComponent(schoolName);
+
+  callSATS(url, function(data) {
+
+    if (!data || !data.success) {
+      alert(
+        (data && data.message) ||
+        "Gagal menyimpan nama sekolah."
+      );
+      return;
+    }
+
+    loadSchoolSettings();
+
+    alert(
+      "Nama sekolah berjaya disimpan."
+    );
+
+  });
+}
+
+
+function previewSchoolLogoFile(input) {
+
+  const file = input && input.files
+    ? input.files[0]
+    : null;
+
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("Sila pilih fail gambar.");
+    input.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(e) {
+
+    const preview =
+      document.getElementById(
+        "schoolLogoPreview"
+      );
+
+    if (preview) {
+      preview.src = e.target.result;
+      preview.style.display = "block";
+    }
+
+  };
+
+  reader.readAsDataURL(file);
+}
+
+
+function uploadSchoolLogo() {
+
+  const input =
+    document.getElementById(
+      "schoolLogoFile"
+    );
+
+  if (!input || !input.files || !input.files.length) {
+    alert("Sila pilih logo sekolah dahulu.");
+    return;
+  }
+
+  const file =
+    input.files[0];
+
+  if (!file.type.startsWith("image/")) {
+    alert("Fail yang dipilih bukan gambar.");
+    return;
+  }
+
+  const reader =
+    new FileReader();
+
+  reader.onload = function(e) {
+
+    const img =
+      new Image();
+
+    img.onload = function() {
+
+      /*
+       * A normal file such as 242 KB can still create a
+       * Base64 string larger than the SATS storage target.
+       * Compress progressively instead of rejecting it.
+       */
+
+      const maxStoredChars = 7000;
+
+      let maxSize = 180;
+      let quality = 0.45;
+      let dataUrl = "";
+
+      for (
+        let attempt = 0;
+        attempt < 10;
+        attempt++
+      ) {
+
+        let width =
+          img.naturalWidth ||
+          img.width;
+
+        let height =
+          img.naturalHeight ||
+          img.height;
+
+        const scale =
+          Math.min(
+            1,
+            maxSize /
+              Math.max(
+                width,
+                height
+              )
+          );
+
+        width =
+          Math.max(
+            1,
+            Math.round(
+              width * scale
+            )
+          );
+
+        height =
+          Math.max(
+            1,
+            Math.round(
+              height * scale
+            )
+          );
+
+        const canvas =
+          document.createElement(
+            "canvas"
+          );
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx =
+          canvas.getContext(
+            "2d"
+          );
+
+        ctx.fillStyle =
+          "#ffffff";
+
+        ctx.fillRect(
+          0,
+          0,
+          width,
+          height
+        );
+
+        ctx.drawImage(
+          img,
+          0,
+          0,
+          width,
+          height
+        );
+
+        dataUrl =
+          canvas.toDataURL(
+            "image/jpeg",
+            quality
+          );
+
+        if (
+          dataUrl.length <=
+          maxStoredChars
+        ) {
+          break;
+        }
+
+        maxSize =
+          Math.max(
+            80,
+            Math.round(
+              maxSize * 0.82
+            )
+          );
+
+        quality =
+          Math.max(
+            0.18,
+            quality - 0.04
+          );
+      }
+
+      if (
+        !dataUrl ||
+        dataUrl.length >
+          maxStoredChars
+      ) {
+
+        alert(
+          "Logo tidak dapat dikecilkan ke saiz simpanan SATS."
+        );
+
+        return;
+      }
+
+      const url =
+        SATS_API +
+        "?action=setSchoolLogo" +
+        "&logo=" +
+        encodeURIComponent(
+          dataUrl
+        );
+
+      const button =
+        document.querySelector(
+          '[onclick="uploadSchoolLogo()"]'
+        );
+
+      if (button) {
+
+        button.disabled =
+          true;
+
+        button.innerText =
+          "⏳ Menyimpan...";
+      }
+
+      callSATS(
+        url,
+        function(data) {
+
+          if (button) {
+
+            button.disabled =
+              false;
+
+            button.innerText =
+              "🖼️ Upload & Simpan Logo";
+          }
+
+          if (
+            !data ||
+            !data.success
+          ) {
+
+            alert(
+              (data &&
+                data.message) ||
+              "Gagal menyimpan logo."
+            );
+
+            return;
+          }
+
+          const savedLogo =
+            data.schoolLogo ||
+            dataUrl;
+
+          const settingInput =
+            document.getElementById(
+              "schoolLogoSetting"
+            );
+
+          if (settingInput) {
+            settingInput.value =
+              savedLogo;
+          }
+
+          const schoolNameInput =
+            document.getElementById(
+              "schoolNameSetting"
+            );
+
+          updateSchoolBrand(
+            schoolNameInput &&
+              schoolNameInput.value
+              ? schoolNameInput.value
+              : "SATS",
+            savedLogo
+          );
+
+          const preview =
+            document.getElementById(
+              "schoolLogoPreview"
+            );
+
+          if (preview) {
+
+            preview.src =
+              savedLogo;
+
+            preview.style.display =
+              "block";
+          }
+
+          alert(
+            "✓ Logo sekolah berjaya disimpan."
+          );
+        }
+      );
+    };
+
+    img.onerror = function() {
+
+      alert(
+        "Logo tidak dapat dibaca."
+      );
+    };
+
+    img.src =
+      e.target.result;
+  };
+
+  reader.onerror = function() {
+
+    alert(
+      "Fail logo tidak dapat dibaca."
+    );
+  };
+
+  reader.readAsDataURL(file);
+}
+
+
+function renderSettingsClasses(
+  classes
+) {
+
+  const container =
+    document.getElementById(
+      "settingsClassList"
+    );
+
+  if (!container) return;
+
+  if (!classes.length) {
+
+    container.innerHTML =
+      '<div style="color:#6b7280;">Tiada kelas.</div>';
+
+    return;
+
+  }
+
+  container.innerHTML =
+    classes.map(function(className) {
+
+      return (
+        '<div class="settings-class-row">' +
+          '<strong>' +
+            escapeHtml(className) +
+          '</strong>' +
+          '<button ' +
+            'class="settings-delete-class" ' +
+            'onclick="deleteClassSetting(' +
+              JSON.stringify(className) +
+            ')">' +
+            '🗑️ Padam' +
+          '</button>' +
+        '</div>'
+      );
+
+    }).join("");
+}
+
+
+function addClassSetting() {
+
+  const input =
+    document.getElementById(
+      "newClassSetting"
+    );
+
+  const className =
+    input
+      ? input.value.trim()
+      : "";
+
+  if (!className) {
+    alert("Sila masukkan nama kelas.");
+    return;
+  }
+
+  const url =
+    SATS_API +
+    "?action=addClass" +
+    "&className=" +
+    encodeURIComponent(className);
+
+  callSATS(url, function(data) {
+
+    if (!data || !data.success) {
+      alert(
+        (data && data.message) ||
+        "Gagal menambah kelas."
+      );
+      return;
+    }
+
+    if (input) {
+      input.value = "";
+    }
+
+    renderSettingsClasses(
+      data.classes || []
+    );
+
+    loadClasses();
+    loadStudents();
+
+  });
+}
+
+
+function deleteClassSetting(
+  className
+) {
+
+  if (
+    !confirm(
+      "Padam kelas " +
+      className +
+      "?"
+    )
+  ) {
+    return;
+  }
+
+  const url =
+    SATS_API +
+    "?action=deleteClass" +
+    "&className=" +
+    encodeURIComponent(className);
+
+  callSATS(url, function(data) {
+
+    if (!data || !data.success) {
+      alert(
+        (data && data.message) ||
+        "Gagal memadam kelas."
+      );
+      return;
+    }
+
+    renderSettingsClasses(
+      data.classes || []
+    );
+
+    loadClasses();
+    loadStudents();
+
+  });
+}
+
+
+</script>
+
+
+</body>
+
+</html>
