@@ -2762,7 +2762,7 @@ input:focus-visible {
    ================================================= */
 
 const SATS_API =
-  "https://script.google.com/macros/s/AKfycbyqpS875bLVdCzl7FSDntE-AMxIq7hmoZDJJBSFimPGiQib17dqpgKmyA10Wwo8hn3W/exec";
+  "https://script.google.com/macros/s/AKfycbxmq-vR8ITXiLjgZn3Gyezmr2vbC5iIghWrY-MpRR4j2Q6LA0K1BOJb3hXXVswG6ZFe/exec";
 
 /*
  * Sekolah ini menggunakan data murid daripada IMPORTRANGE.
@@ -5234,6 +5234,7 @@ function syncImportedStudentView(students) {
       importedClasses;
 
     populateAllClassSelectors();
+    populateStudentClassFilter();
 
   }
 
@@ -5408,6 +5409,39 @@ function ensureStudentsLoaded(
 
 
 
+function populateStudentClassFilter() {
+
+  const select =
+    document.getElementById(
+      "studentClassFilter"
+    );
+
+  if (!select) return;
+
+  const current =
+    select.value;
+
+  select.innerHTML =
+    '<option value="">Semua Kelas</option>' +
+    allClasses.map(function(className) {
+      return (
+        '<option value="' +
+        escapeAttribute(className) +
+        '">' +
+        escapeHtml(className) +
+        '</option>'
+      );
+    }).join("");
+
+  if (
+    current &&
+    allClasses.indexOf(current) !== -1
+  ) {
+    select.value = current;
+  }
+
+}
+
 function populateAllClassSelectors() {
 
   try {
@@ -5558,10 +5592,46 @@ function loadClasses(
     return;
   }
 
-  const addSelect = document.getElementById("studentClassInput");
-  const filterSelect = document.getElementById("studentClassFilter");
+  const addSelect =
+    document.getElementById("studentClassInput");
 
-  if (!addSelect || !filterSelect) return;
+  const filterSelect =
+    document.getElementById("studentClassFilter");
+
+  if (SATS_STUDENT_IMPORT_MODE) {
+
+    allClasses =
+      Array.from(
+        new Set(
+          allStudents
+            .map(function(student) {
+              return String(
+                student.className || ""
+              ).trim();
+            })
+            .filter(Boolean)
+        )
+      ).sort(function(a, b) {
+        return a.localeCompare(
+          b,
+          undefined,
+          {
+            numeric: true,
+            sensitivity: "base"
+          }
+        );
+      });
+
+    populateAllClassSelectors();
+
+    if (typeof done === "function") {
+      done(allClasses);
+    }
+
+    return;
+  }
+
+  if (!addSelect && !filterSelect) return;
 
   const url = SATS_API + "?action=getClasses";
 
