@@ -5871,33 +5871,70 @@ function getTodayDateInput() {
 function prepareManualAttendancePage() {
 
   const date =
-    document.getElementById("manualDate");
+    document.getElementById(
+      "manualDate"
+    );
 
   if (
     date &&
     !date.value
   ) {
+
     date.value =
       getTodayDateInput();
+
   }
 
-  if (!allClasses.length) {
+  /*
+   * Load the actual imported student data first.
+   * Classes are then derived from the same data,
+   * so Manual cannot show a class list without
+   * having the corresponding students available.
+   */
+  ensureStudentsLoaded(
+    function(students) {
 
-    populateManualClasses();
+      if (
+        SATS_STUDENT_IMPORT_MODE
+      ) {
 
-    loadClasses(
-      function() {
-        populateManualClasses();
+        allClasses =
+          Array.from(
+            new Set(
+              (Array.isArray(students)
+                ? students
+                : []
+              )
+                .map(function(student) {
+                  return String(
+                    student.className ||
+                    ""
+                  ).trim();
+                })
+                .filter(Boolean)
+            )
+          ).sort(function(a, b) {
+
+            return a.localeCompare(
+              b,
+              undefined,
+              {
+                numeric: true,
+                sensitivity: "base"
+              }
+            );
+
+          });
+
       }
-    );
 
-    return;
+      populateManualClasses();
 
-  }
-
-  populateManualClasses();
+    }
+  );
 
 }
+
 
 
 function populateManualClasses() {
