@@ -2172,7 +2172,10 @@ input:focus-visible {
 
   <!-- ADD STUDENT -->
 
-  <div class="card">
+  <div
+    id="addStudentCard"
+    class="card"
+  >
 
     <h3>
       ➕ Tambah Murid
@@ -2485,10 +2488,16 @@ input:focus-visible {
       </button>
     </div>
 
-    <div class="card">
+    <div
+      id="classManagementCard"
+      class="card"
+    >
       <h2>👩‍🏫 Senarai Kelas</h2>
 
-      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;">
+      <div
+        id="classManagementControls"
+        style="display:grid;grid-template-columns:1fr auto;gap:10px;"
+      >
         <input
           id="newClassSetting"
           class="form-input"
@@ -2754,6 +2763,13 @@ input:focus-visible {
 
 const SATS_API =
   "https://script.google.com/macros/s/AKfycbxmq-vR8ITXiLjgZn3Gyezmr2vbC5iIghWrY-MpRR4j2Q6LA0K1BOJb3hXXVswG6ZFe/exec";
+
+/*
+ * Sekolah ini menggunakan data murid daripada IMPORTRANGE.
+ * Nama, Kelas dan RMT adalah READ-ONLY.
+ */
+const SATS_STUDENT_IMPORT_MODE = true;
+
 
 /*
  * Logo sekolah lalai.
@@ -6147,12 +6163,10 @@ function renderStudents(
   students
 ) {
 
-
   const container =
     document.getElementById(
       "studentList"
     );
-
 
   if (
     !students.length
@@ -6167,13 +6181,10 @@ function renderStudents(
 
   }
 
-
   let html = "";
-
 
   students.forEach(
     function(student) {
-
 
       const qrUrl =
         "https://quickchart.io/qr?text=" +
@@ -6182,7 +6193,6 @@ function renderStudents(
         ) +
         "&size=300";
 
-
       html +=
 
         "<div class='student-card'>" +
@@ -6190,34 +6200,54 @@ function renderStudents(
           "<div class='student-card-content'>" +
 
             "<div class='student-select-wrap'>" +
+
               "<input type='checkbox' class='student-select' " +
-                "data-student-id='" + escapeAttribute(student.id) + "' " +
-                (selectedStudentIds.has(String(student.id)) ? "checked " : "") +
+                "data-student-id='" +
+                escapeAttribute(student.id) +
+                "' " +
+                (
+                  selectedStudentIds.has(
+                    String(student.id)
+                  )
+                    ? "checked "
+                    : ""
+                ) +
                 "onchange='toggleStudentSelection(this)'>" +
+
               "<div>" +
 
-              "<div class='student-card-name'>" +
-                escapeHtml(
-                  student.name
-                ) +
+                "<div class='student-card-name'>" +
+                  escapeHtml(
+                    student.name
+                  ) +
+                "</div>" +
+
+                "<div class='student-card-info'>" +
+                  "ID: " +
+                  escapeHtml(
+                    student.id
+                  ) +
+                "</div>" +
+
+                "<div class='student-card-info'>" +
+                  "Kelas: " +
+                  escapeHtml(
+                    student.className
+                  ) +
+                "</div>" +
+
+                "<div class='student-card-info'>" +
+                  "RMT: " +
+                  escapeHtml(
+                    student.rmt ||
+                    "-"
+                  ) +
+                "</div>" +
+
               "</div>" +
 
-              "<div class='student-card-info'>" +
-                "ID: " +
-                escapeHtml(
-                  student.id
-                ) +
-              "</div>" +
-
-              "<div class='student-card-info'>" +
-                "Kelas: " +
-                escapeHtml(
-                  student.className
-                ) +
-              "</div>" +
-
-              "</div>" +
             "</div>" +
+
             "<img " +
               "class='student-qr' " +
               "src='" +
@@ -6227,38 +6257,10 @@ function renderStudents(
 
           "</div>" +
 
-
-          "<div class='student-actions'>" +
-            "<button " +
-              "class='edit-button' " +
-              "onclick=\"openEditStudent('" +
-              escapeAttribute(
-                student.id
-              ) +
-              "')\">" +
-              "✏️ Edit" +
-            "</button>" +
-
-
-            "<button " +
-              "class='delete-button' " +
-              "onclick=\"deleteStudentFromApp('" +
-              escapeAttribute(
-                student.id
-              ) +
-              "')\">" +
-
-              "🗑️ Padam" +
-
-            "</button>" +
-
-          "</div>" +
-
         "</div>";
 
     }
   );
-
 
   container.innerHTML =
     html;
@@ -6909,6 +6911,13 @@ function printFilteredStudents() {
 
 function openEditStudent(studentId) {
 
+  if (SATS_STUDENT_IMPORT_MODE) {
+    alert(
+      "Data murid ini datang daripada IMPORTRANGE dan tidak boleh diedit dalam SATS."
+    );
+    return;
+  }
+
   const student =
     allStudents.find(function(item) {
       return String(item.id || "") ===
@@ -6975,6 +6984,13 @@ function cancelEditStudent() {
 
 
 function saveEditedStudent() {
+
+  if (SATS_STUDENT_IMPORT_MODE) {
+    alert(
+      "Data murid ini datang daripada IMPORTRANGE dan tidak boleh diedit dalam SATS."
+    );
+    return;
+  }
 
   const originalId =
     document.getElementById(
@@ -7053,6 +7069,12 @@ function deleteStudentFromApp(
   studentId
 ) {
 
+  if (SATS_STUDENT_IMPORT_MODE) {
+    alert(
+      "Data murid ini datang daripada IMPORTRANGE dan tidak boleh dipadam dalam SATS."
+    );
+    return;
+  }
 
   const confirmed =
     confirm(
@@ -9108,6 +9130,65 @@ function escapeAttribute(
 }
 
 
+
+/* =================================================
+   IMPORT MODE UI
+   ================================================= */
+
+function applyStudentImportModeUI() {
+
+  if (
+    !SATS_STUDENT_IMPORT_MODE
+  ) {
+    return;
+  }
+
+  const addCard =
+    document.getElementById(
+      "addStudentCard"
+    );
+
+  if (addCard) {
+    addCard.style.display =
+      "none";
+  }
+
+  const editPanel =
+    document.getElementById(
+      "editStudentPanel"
+    );
+
+  if (editPanel) {
+    editPanel.style.display =
+      "none";
+  }
+
+  const classManagement =
+    document.getElementById(
+      "classManagementCard"
+    );
+
+  if (classManagement) {
+    classManagement.style.display =
+      "none";
+  }
+
+  /*
+   * Make it clear to the user that
+   * the student list is imported.
+   */
+  const subtitle =
+    document.querySelector(
+      "#students .page-subtitle"
+    );
+
+  if (subtitle) {
+    subtitle.innerHTML =
+      "Data murid, kelas dan status RMT diambil secara automatik daripada sumber IMPORTRANGE.";
+  }
+
+}
+
 /* =================================================
    INITIALISE
    ================================================= */
@@ -9116,6 +9197,7 @@ document.addEventListener(
   "DOMContentLoaded",
   function() {
 
+    applyStudentImportModeUI();
     ensureSATSConnectionBar();
     bootSATS();
 
@@ -9624,13 +9706,17 @@ function renderSettingsClasses(
           '<strong>' +
             escapeHtml(className) +
           '</strong>' +
-          '<button ' +
-            'class="settings-delete-class" ' +
-            'onclick="deleteClassSetting(' +
-              JSON.stringify(className) +
-            ')">' +
-            '🗑️ Padam' +
-          '</button>' +
+          (
+            SATS_STUDENT_IMPORT_MODE
+              ? ''
+              : '<button ' +
+                'class="settings-delete-class" ' +
+                'onclick="deleteClassSetting(' +
+                  JSON.stringify(className) +
+                ')">' +
+                '🗑️ Padam' +
+              '</button>'
+          ) +
         '</div>'
       );
 
@@ -9639,6 +9725,13 @@ function renderSettingsClasses(
 
 
 function addClassSetting() {
+
+  if (SATS_STUDENT_IMPORT_MODE) {
+    alert(
+      "Senarai kelas datang daripada IMPORTRANGE dan tidak boleh ditambah dalam SATS."
+    );
+    return;
+  }
 
   const input =
     document.getElementById(
@@ -9689,6 +9782,13 @@ function addClassSetting() {
 function deleteClassSetting(
   className
 ) {
+
+  if (SATS_STUDENT_IMPORT_MODE) {
+    alert(
+      "Senarai kelas datang daripada IMPORTRANGE dan tidak boleh dipadam dalam SATS."
+    );
+    return;
+  }
 
   if (
     !confirm(
