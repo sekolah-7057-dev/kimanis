@@ -2862,8 +2862,24 @@ function showPage(pageName) {
 
     stopScanner();
 
-    loadClasses();
-    loadStudents();
+    /*
+     * SCHOOL BARU:
+     * Jangan buat dua request berasingan di sini.
+     * ensureStudentsLoaded() akan mengambil getStudents()
+     * sekali sahaja dan membina senarai kelas daripada
+     * data murid yang diterima.
+     */
+    ensureStudentsLoaded(
+      function(students) {
+
+        if (!Array.isArray(students)) {
+          students = [];
+        }
+
+        syncImportedStudentView(students);
+
+      }
+    );
 
   }
 
@@ -5097,6 +5113,146 @@ function showStudentsLoadingState() {
 
 }
 
+function normalizeImportedStudent(student) {
+
+  student =
+    student || {};
+
+  return {
+
+    id:
+      String(
+        student.id ??
+        student.ID ??
+        student.studentId ??
+        student.studentID ??
+        ""
+      ).trim(),
+
+    name:
+      String(
+        student.name ??
+        student.studentName ??
+        student.nama ??
+        student.namaMurid ??
+        ""
+      ).trim(),
+
+    className:
+      String(
+        student.className ??
+        student.class ??
+        student.kelas ??
+        student.class_name ??
+        ""
+      ).trim(),
+
+    rmt:
+      String(
+        student.rmt ??
+        student.RMT ??
+        student.rmtStatus ??
+        student.statusRMT ??
+        ""
+      ).trim(),
+
+    qr:
+      String(
+        student.qr ??
+        student.qrCode ??
+        student.QR ??
+        student.qrcode ??
+        ""
+      ).trim(),
+
+    profile:
+      String(
+        student.profile ??
+        student.profilePicture ??
+        student.profilePic ??
+        ""
+      ).trim(),
+
+    file:
+      String(
+        student.file ??
+        student.fileUrl ??
+        ""
+      ).trim()
+
+  };
+
+}
+
+
+function syncImportedStudentView(students) {
+
+  allStudents =
+    (Array.isArray(students) ? students : [])
+      .map(normalizeImportedStudent)
+      .filter(function(student) {
+
+        return (
+          student.name ||
+          student.className ||
+          student.id
+        );
+
+      });
+
+  /*
+   * In import mode, classes are derived directly
+   * from the students returned by getStudents().
+   */
+  const importedClasses =
+    Array.from(
+      new Set(
+        allStudents
+          .map(function(student) {
+            return student.className;
+          })
+          .filter(Boolean)
+      )
+    ).sort(function(a, b) {
+
+      return a.localeCompare(
+        b,
+        undefined,
+        {
+          numeric: true,
+          sensitivity: "base"
+        }
+      );
+
+    });
+
+  if (
+    SATS_STUDENT_IMPORT_MODE
+  ) {
+
+    allClasses =
+      importedClasses;
+
+    populateAllClassSelectors();
+
+  }
+
+  selectedStudentIds.clear();
+
+  satsStudentsReady =
+    true;
+
+  renderStudents(
+    allStudents
+  );
+
+  updatePrintButton(
+    allStudents.length
+  );
+
+}
+
+
 function ensureStudentsLoaded(
   done
 ) {
@@ -5110,16 +5266,17 @@ function ensureStudentsLoaded(
       typeof done ===
       "function"
     ) {
+
       done(
         allStudents
       );
+
     }
 
     return;
+
   }
 
-
-  // Prevent duplicate student requests.
   if (
     window.satsStudentsLoading
   ) {
@@ -5132,15 +5289,16 @@ function ensureStudentsLoaded(
       typeof done ===
       "function"
     ) {
+
       window.satsStudentsWaiters.push(
         done
       );
+
     }
 
     return;
 
   }
-
 
   window.satsStudentsLoading =
     true;
@@ -5154,11 +5312,12 @@ function ensureStudentsLoaded(
     typeof done ===
     "function"
   ) {
+
     window.satsStudentsWaiters.push(
       done
     );
-  }
 
+  }
 
   callSATS(
     SATS_API +
@@ -5168,25 +5327,47 @@ function ensureStudentsLoaded(
       window.satsStudentsLoading =
         false;
 
+      let students = [];
+
       if (
         data &&
         data.success
       ) {
 
-        allStudents =
+        students =
           Array.isArray(
             data.students
           )
             ? data.students
             : [];
 
-        satsStudentsReady =
-          true;
+        syncImportedStudentView(
+          students
+        );
 
-        renderStudentDataFromCache();
+      } else {
+
+        satsStudentsReady =
+          false;
+
+        const container =
+          document.getElementById(
+            "studentList"
+          );
+
+        if (container) {
+
+          container.innerHTML =
+            "<div class='card error'>" +
+            escapeHtml(
+              (data && data.message) ||
+              "Gagal mendapatkan data murid."
+            ) +
+            "</div>";
+
+        }
 
       }
-
 
       const waiters =
         window.satsStudentsWaiters ||
@@ -5194,7 +5375,6 @@ function ensureStudentsLoaded(
 
       window.satsStudentsWaiters =
         [];
-
 
       waiters.forEach(
         function(waiter) {
@@ -5207,9 +5387,7 @@ function ensureStudentsLoaded(
                 : []
             );
 
-          }
-
-          catch(error) {
+          } catch(error) {
 
             console.warn(
               "Student waiter error:",
@@ -5225,6 +5403,9 @@ function ensureStudentsLoaded(
   );
 
 }
+
+
+
 
 
 function populateAllClassSelectors() {
@@ -6029,87 +6210,24 @@ function saveManualAttendance() {
 
 function loadStudents() {
 
+  /*
+   * Compatibility wrapper.
+   * All student loading now goes through one path.
+   */
+  ensureStudentsLoaded(
+    function(students) {
 
-  const container =
-    document.getElementById(
-      "studentList"
-    );
-
-
-  container.innerHTML =
-    "<div class='loading'>" +
-    "⏳ Memuatkan data murid..." +
-    "</div>";
-
-
-  const url =
-    SATS_API +
-    "?action=getStudents";
-
-
-  callSATS(
-    url,
-    function(data) {
-
-      if (
-        !data.success
-      ) {
-
-        container.innerHTML =
-          "<div class='card error'>" +
-          escapeHtml(
-            data.message ||
-            "Gagal mendapatkan data murid."
-          ) +
-          "</div>";
-
-        return;
-
-      }
-
-
-      allStudents =
-        data.students ||
-        [];
-
-      selectedStudentIds.clear();
-
-      // Clear any previous connection/error message.
-      container.innerHTML = "";
-
-      // Build the class dropdown directly from the student data.
-      // This avoids a second API request when opening Data Murid.
-      allClasses =
-        Array.from(
-          new Set(
-            allStudents
-              .map(function(student) {
-                return String(
-                  student.className || ""
-                ).trim();
-              })
-              .filter(Boolean)
-          )
-        ).sort(function(a, b) {
-          return a.localeCompare(
-            b,
-            undefined,
-            {numeric: true}
-          );
-        });
-
-      populateClassDropdowns();
-
-      renderStudents(
-        allStudents
+      syncImportedStudentView(
+        students
       );
-
-      updatePrintButton(allStudents.length);
 
     }
   );
 
 }
+
+
+
 
 
 function populateClassDropdowns() {
@@ -6168,8 +6286,25 @@ function renderStudents(
       "studentList"
     );
 
+  if (!container) {
+    return;
+  }
+
+  const normalized =
+    (Array.isArray(students) ? students : [])
+      .map(normalizeImportedStudent)
+      .filter(function(student) {
+
+        return (
+          student.name ||
+          student.className ||
+          student.id
+        );
+
+      });
+
   if (
-    !students.length
+    !normalized.length
   ) {
 
     container.innerHTML =
@@ -6181,33 +6316,42 @@ function renderStudents(
 
   }
 
-  let html = "";
+  let output = "";
 
-  students.forEach(
+  normalized.forEach(
     function(student) {
+
+      const qrValue =
+        student.id ||
+        student.name;
 
       const qrUrl =
         "https://quickchart.io/qr?text=" +
         encodeURIComponent(
-          student.id
+          qrValue
         ) +
         "&size=300";
 
-      html +=
-
+      output +=
         "<div class='student-card'>" +
 
           "<div class='student-card-content'>" +
 
             "<div class='student-select-wrap'>" +
 
-              "<input type='checkbox' class='student-select' " +
+              "<input " +
+                "type='checkbox' " +
+                "class='student-select' " +
                 "data-student-id='" +
-                escapeAttribute(student.id) +
+                escapeAttribute(
+                  student.id
+                ) +
                 "' " +
                 (
                   selectedStudentIds.has(
-                    String(student.id)
+                    String(
+                      student.id
+                    )
                   )
                     ? "checked "
                     : ""
@@ -6218,21 +6362,24 @@ function renderStudents(
 
                 "<div class='student-card-name'>" +
                   escapeHtml(
-                    student.name
+                    student.name ||
+                    "(Nama tidak tersedia)"
                   ) +
                 "</div>" +
 
                 "<div class='student-card-info'>" +
                   "ID: " +
                   escapeHtml(
-                    student.id
+                    student.id ||
+                    "-"
                   ) +
                 "</div>" +
 
                 "<div class='student-card-info'>" +
                   "Kelas: " +
                   escapeHtml(
-                    student.className
+                    student.className ||
+                    "-"
                   ) +
                 "</div>" +
 
@@ -6263,9 +6410,12 @@ function renderStudents(
   );
 
   container.innerHTML =
-    html;
+    output;
 
 }
+
+
+
 
 
 /* =================================================
