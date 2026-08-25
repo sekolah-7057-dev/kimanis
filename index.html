@@ -6029,56 +6029,86 @@ function saveManualAttendance() {
 
 function loadStudents() {
 
-
   const container =
-    document.getElementById(
-      "studentList"
+    document.getElementById("studentList");
+
+  if (!container) {
+    return;
+  }
+
+  /*
+   * IMPORTANT:
+   * Data Murid is read-only and comes from IMPORTRANGE.
+   *
+   * Use the same single student cache used by the rest
+   * of the SATS frontend. This prevents multiple
+   * getStudents requests and keeps class/student data
+   * consistent across Data Murid and Manual.
+   */
+
+  if (
+    typeof satsStudentsReady !== "undefined" &&
+    satsStudentsReady &&
+    Array.isArray(allStudents) &&
+    allStudents.length
+  ) {
+
+    allClasses =
+      Array.from(
+        new Set(
+          allStudents
+            .map(function(student) {
+              return String(
+                student.className || ""
+              ).trim();
+            })
+            .filter(Boolean)
+        )
+      ).sort(function(a, b) {
+        return a.localeCompare(
+          b,
+          undefined,
+          {numeric: true}
+        );
+      });
+
+    populateClassDropdowns();
+
+    renderStudents(
+      allStudents
     );
 
+    updatePrintButton(
+      allStudents.length
+    );
+
+    return;
+  }
 
   container.innerHTML =
     "<div class='loading'>" +
     "⏳ Memuatkan data murid..." +
     "</div>";
 
-
-  const url =
-    SATS_API +
-    "?action=getStudents";
-
-
-  callSATS(
-    url,
-    function(data) {
+  ensureStudentsLoaded(
+    function(students) {
 
       if (
-        !data.success
+        !Array.isArray(students) ||
+        !students.length
       ) {
 
         container.innerHTML =
           "<div class='card error'>" +
-          escapeHtml(
-            data.message ||
-            "Gagal mendapatkan data murid."
-          ) +
+          "Tiada data murid diterima daripada SATS." +
           "</div>";
 
         return;
-
       }
 
-
       allStudents =
-        data.students ||
-        [];
+        students;
 
-      selectedStudentIds.clear();
-
-      // Clear any previous connection/error message.
-      container.innerHTML = "";
-
-      // Build the class dropdown directly from the student data.
-      // This avoids a second API request when opening Data Murid.
       allClasses =
         Array.from(
           new Set(
@@ -6104,7 +6134,9 @@ function loadStudents() {
         allStudents
       );
 
-      updatePrintButton(allStudents.length);
+      updatePrintButton(
+        allStudents.length
+      );
 
     }
   );
