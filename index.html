@@ -4615,107 +4615,194 @@ function deleteSchoolCalendarEntry(rowNumber) {
    JSONP HELPER
    ================================================= */
 
-function callSATS(url, callback, attempt) {
+function callSATS(actionOrUrl, paramsOrSuccess, onSuccessOrError, onErrorMaybe) {
 
-  attempt = Number(attempt || 0);
+  let requestUrl = "";
+  let onSuccess = null;
+  let onError = null;
 
-  const maxAttempts = 2;
+  // Backward-compatible form:
+  // callSATS(fullUrl, success, error)
+  if (
+    typeof actionOrUrl === "string" &&
+    actionOrUrl.indexOf("action=") >= 0
+  ) {
+
+    requestUrl = actionOrUrl;
+
+    onSuccess =
+      typeof paramsOrSuccess === "function"
+        ? paramsOrSuccess
+        : null;
+
+    onError =
+      typeof onSuccessOrError === "function"
+        ? onSuccessOrError
+        : null;
+
+  } else {
+
+    // New form:
+    // callSATS("getStudents", {}, success, error)
+    const action =
+      String(actionOrUrl || "");
+
+    const params =
+      paramsOrSuccess &&
+      typeof paramsOrSuccess === "object"
+        ? paramsOrSuccess
+        : {};
+
+    onSuccess =
+      typeof onSuccessOrError === "function"
+        ? onSuccessOrError
+        : null;
+
+    onError =
+      typeof onErrorMaybe === "function"
+        ? onErrorMaybe
+        : null;
+
+    const query =
+      new URLSearchParams();
+
+    query.set("action", action);
+
+    Object.keys(params).forEach(function(key) {
+      if (
+        params[key] !== undefined &&
+        params[key] !== null
+      ) {
+        query.set(
+          key,
+          String(params[key])
+        );
+      }
+    });
+
+    requestUrl =
+      SATS_API +
+      (SATS_API.indexOf("?") >= 0 ? "&" : "?") +
+      query.toString();
+
+  }
+
   const callbackName =
-    "satsCallback_" +
-    Date.now() + "_" +
-    Math.floor(Math.random() * 1000000);
+    "satsJsonp_" +
+    Date.now() +
+    "_" +
+    Math.random()
+      .toString(36)
+      .slice(2);
+
+  const script =
+    document.createElement("script");
 
   let finished = false;
   let timeoutId = null;
 
-  const script = document.createElement("script");
-  script.async = true;
-
   function cleanup() {
-    if (script.parentNode) {
-      script.parentNode.removeChild(script);
+
+    if (timeoutId) {
+      clearTimeout(timeoutId);
     }
 
     try {
       delete window[callbackName];
-    } catch (error) {}
-  }
-
-  function retryOrFail(message, type) {
-    if (finished) return;
-
-    if (attempt < maxAttempts) {
-      finished = true;
-      if (timeoutId) clearTimeout(timeoutId);
-      cleanup();
-
-      setTimeout(function() {
-        callSATS(url, callback, attempt + 1);
-      }, 600 * (attempt + 1));
-      return;
+    } catch (e) {
+      window[callbackName] = undefined;
     }
 
-    finished = true;
-    if (timeoutId) clearTimeout(timeoutId);
-    cleanup();
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
+    }
 
-    callback({
-      success: false,
-      type: type || "connection",
-      message: message || "SATS tidak memberi respons yang sah."
-    });
   }
 
-  function finish(data) {
+  function fail(error) {
+
     if (finished) return;
 
     finished = true;
-    if (timeoutId) clearTimeout(timeoutId);
     cleanup();
 
-    callback(data);
+    if (onError) {
+      onError(error);
+    }
+
   }
 
-  window[callbackName] = function(data) {
-    finish(data);
-  };
+  window[callbackName] =
+    function(response) {
 
-  const separator = url.indexOf("?") >= 0 ? "&" : "?";
-  const requestUrl =
-    url +
+      if (finished) return;
+
+      finished = true;
+      cleanup();
+
+      if (
+        response &&
+        response.success === false
+      ) {
+
+        if (onError) {
+          onError(
+            new Error(
+              response.message ||
+              "SATS memulangkan ralat."
+            )
+          );
+        }
+
+        return;
+      }
+
+      if (onSuccess) {
+        onSuccess(response);
+      }
+
+    };
+
+  const separator =
+    requestUrl.indexOf("?") >= 0
+      ? "&"
+      : "?";
+
+  script.src =
+    requestUrl +
     separator +
-    "callback=" + encodeURIComponent(callbackName) +
-    "&_=" + Date.now();
+    "callback=" +
+    encodeURIComponent(callbackName) +
+    "&_ts=" +
+    Date.now();
 
-  script.src = requestUrl;
+  script.async = true;
 
-  script.onerror = function() {
-    retryOrFail(
-      "SATS gagal memuatkan respons. Sila semak URL Web App dan deployment Apps Script.",
-      "connection"
-    );
-  };
+  script.onerror =
+    function() {
 
-  document.body.appendChild(script);
+      fail(
+        new Error(
+          "Browser gagal menghubungi SATS Web App."
+        )
+      );
 
-  timeoutId = setTimeout(function() {
-    retryOrFail(
-      "SATS mengambil masa terlalu lama untuk memberi respons.",
-      "timeout"
-    );
-  }, 15000);
+    };
+
+  timeoutId =
+    setTimeout(function() {
+
+      fail(
+        new Error(
+          "SATS API tidak memberi respons dalam 20 saat."
+        )
+      );
+
+    }, 20000);
+
+  document.head.appendChild(script);
+
 }
-
-
-/* =================================================
-   SATS MOBILE CONNECTION / DATA MANAGER
-   ================================================= */
-
-let satsConnected = false;
-let satsBooting = false;
-let satsSchoolSettings = null;
-let satsClassesReady = false;
-let satsStudentsReady = false;
 
 
 function setSATSConnectionStatus(
@@ -5174,146 +5261,184 @@ function syncImportedStudentView(students) {
 }
 
 
-function ensureStudentsLoaded(
-  done
-) {
+function ensureStudentsLoaded(done) {
 
   if (
-    satsStudentsReady &&
-    Array.isArray(allStudents)
+    Array.isArray(allStudents) &&
+    allStudents.length > 0
   ) {
 
-    if (
-      typeof done ===
-      "function"
-    ) {
-
-      done(
-        allStudents
-      );
-
+    if (typeof done === "function") {
+      done(allStudents);
     }
 
     return;
-
-  }
-
-  if (
-    window.satsStudentsLoading
-  ) {
-
-    window.satsStudentsWaiters =
-      window.satsStudentsWaiters ||
-      [];
-
-    if (
-      typeof done ===
-      "function"
-    ) {
-
-      window.satsStudentsWaiters.push(
-        done
-      );
-
-    }
-
-    return;
-
-  }
-
-  window.satsStudentsLoading =
-    true;
-
-  showStudentsLoadingState();
-
-  window.satsStudentsWaiters =
-    [];
-
-  if (
-    typeof done ===
-    "function"
-  ) {
-
-    window.satsStudentsWaiters.push(
-      done
-    );
 
   }
 
   callSATS(
-    SATS_API +
-    "?action=getStudents",
-    function(data) {
-
-      window.satsStudentsLoading =
-        false;
+    "getStudents",
+    {},
+    function(response) {
 
       let students = [];
 
       if (
-        data &&
-        data.success
+        response &&
+        Array.isArray(
+          response.students
+        )
       ) {
 
         students =
-          Array.isArray(
-            data.students
-          )
-            ? data.students
-            : [];
+          response.students;
 
-        syncImportedStudentView(
-          students
-        );
+      } else if (
+        response &&
+        Array.isArray(
+          response.data
+        )
+      ) {
 
-      } else {
+        students =
+          response.data;
 
-        satsStudentsReady =
-          false;
+      } else if (
+        Array.isArray(response)
+      ) {
 
-        const container =
-          document.getElementById(
-            "studentList"
-          );
-
-        if (container) {
-
-          container.innerHTML =
-            "<div class='card error'>" +
-            escapeHtml(
-              (data && data.message) ||
-              "Gagal mendapatkan data murid."
-            ) +
-            "</div>";
-
-        }
+        students =
+          response;
 
       }
 
-      const waiters =
-        window.satsStudentsWaiters ||
-        [];
+      /*
+       * Normalize exactly to the structure
+       * returned by the verified Apps Script:
+       * id, name, className, rmt, qr, profile, file
+       */
+      allStudents =
+        students
+          .map(function(student) {
 
-      window.satsStudentsWaiters =
-        [];
+            return {
+              id:
+                String(
+                  student.id || ""
+                ).trim(),
 
-      waiters.forEach(
-        function(waiter) {
+              name:
+                String(
+                  student.name || ""
+                ).trim(),
 
-          try {
+              className:
+                String(
+                  student.className || ""
+                ).trim(),
 
-            waiter(
-              satsStudentsReady
-                ? allStudents
-                : []
+              rmt:
+                String(
+                  student.rmt || ""
+                ).trim(),
+
+              qr:
+                String(
+                  student.qr || ""
+                ).trim(),
+
+              profile:
+                String(
+                  student.profile || ""
+                ).trim(),
+
+              file:
+                String(
+                  student.file || ""
+                ).trim()
+
+            };
+
+          })
+          .filter(function(student) {
+
+            return (
+              student.name ||
+              student.className ||
+              student.id
             );
 
-          } catch(error) {
+          });
 
-            console.warn(
-              "Student waiter error:",
-              error
-            );
+      allClasses =
+        Array.from(
+          new Set(
+            allStudents
+              .map(function(student) {
+                return student.className;
+              })
+              .filter(Boolean)
+          )
+        ).sort(function(a, b) {
+
+          return a.localeCompare(
+            b,
+            undefined,
+            {
+              numeric: true,
+              sensitivity: "base"
+            }
+          );
+
+        });
+
+      if (
+        typeof done === "function"
+      ) {
+
+        done(allStudents);
+
+      }
+
+    },
+    function(error) {
+
+      console.error(
+        "getStudents failed:",
+        error
+      );
+
+      if (typeof done === "function") {
+        done([]);
+      }
+
+      const message =
+        error &&
+        error.message
+          ? error.message
+          : "Data murid gagal dimuatkan.";
+
+      const targets = [
+        "studentsList",
+        "studentList",
+        "manualStudentList"
+      ];
+
+      targets.forEach(
+        function(id) {
+
+          const el =
+            document.getElementById(id);
+
+          if (
+            el &&
+            !el.innerHTML.trim()
+          ) {
+
+            el.innerHTML =
+              "<div class='card error'>" +
+              escapeHtml(message) +
+              "</div>";
 
           }
 
@@ -5324,9 +5449,6 @@ function ensureStudentsLoaded(
   );
 
 }
-
-
-
 
 
 function populateStudentClassFilter() {
@@ -5799,54 +5921,39 @@ function prepareManualAttendancePage() {
     date &&
     !date.value
   ) {
-
     date.value =
       getTodayDateInput();
-
   }
 
-  /*
-   * Load the actual imported student data first.
-   * Classes are then derived from the same data,
-   * so Manual cannot show a class list without
-   * having the corresponding students available.
-   */
   ensureStudentsLoaded(
     function(students) {
 
-      if (
-        SATS_STUDENT_IMPORT_MODE
-      ) {
-
-        allClasses =
-          Array.from(
-            new Set(
-              (Array.isArray(students)
-                ? students
-                : []
-              )
-                .map(function(student) {
-                  return String(
-                    student.className ||
-                    ""
-                  ).trim();
-                })
-                .filter(Boolean)
+      allClasses =
+        Array.from(
+          new Set(
+            (Array.isArray(students)
+              ? students
+              : []
             )
-          ).sort(function(a, b) {
+              .map(function(student) {
+                return String(
+                  student.className || ""
+                ).trim();
+              })
+              .filter(Boolean)
+          )
+        ).sort(function(a, b) {
 
-            return a.localeCompare(
-              b,
-              undefined,
-              {
-                numeric: true,
-                sensitivity: "base"
-              }
-            );
+          return a.localeCompare(
+            b,
+            undefined,
+            {
+              numeric: true,
+              sensitivity: "base"
+            }
+          );
 
-          });
-
-      }
+        });
 
       populateManualClasses();
 
@@ -5854,7 +5961,6 @@ function prepareManualAttendancePage() {
   );
 
 }
-
 
 
 function populateManualClasses() {
@@ -5931,84 +6037,183 @@ function manualReasonOptions(reason, locked) {
 
 function loadManualAttendance() {
 
-  const date =
-    document.getElementById("manualDate").value;
+  const dateEl =
+    document.getElementById("manualDate");
 
-  const className =
-    document.getElementById("manualClass").value;
+  const classEl =
+    document.getElementById("manualClass");
 
   const card =
-    document.getElementById("manualAttendanceCard");
+    document.getElementById(
+      "manualAttendanceCard"
+    );
 
   const body =
-    document.getElementById("manualAttendanceBody");
+    document.getElementById(
+      "manualAttendanceBody"
+    );
 
   const statusBox =
-    document.getElementById("manualCalendarStatus");
+    document.getElementById(
+      "manualCalendarStatus"
+    );
+
+  const date =
+    dateEl ? dateEl.value : "";
+
+  const className =
+    classEl ? classEl.value : "";
 
   if (!date || !className) {
-    alert("Sila pilih tarikh dan kelas.");
+    alert(
+      "Sila pilih tarikh dan kelas."
+    );
     return;
   }
 
-  body.innerHTML =
-    '<tr><td colspan="7" style="padding:15px;text-align:center;">Memuatkan senarai murid...</td></tr>';
+  if (body) {
+    body.innerHTML =
+      '<tr><td colspan="7" style="padding:15px;text-align:center;">Memuatkan senarai murid...</td></tr>';
+  }
 
-  card.style.display =
-    "block";
+  if (card) {
+    card.style.display = "block";
+  }
 
-  callSATS(
-    SATS_API +
-    "?action=getManualAttendance" +
-    "&date=" +
-    encodeURIComponent(date) +
-    "&className=" +
-    encodeURIComponent(className),
+  /*
+   * IMPORTANT:
+   * The verified getStudents API already returns all students.
+   * Build the class list locally and use it as the base.
+   */
+  ensureStudentsLoaded(function(students) {
 
-    function(data) {
+    const classStudents =
+      (Array.isArray(students)
+        ? students
+        : []
+      ).filter(function(student) {
 
-      if (!data || !data.success) {
+        return (
+          String(
+            student.className || ""
+          ).trim() ===
+          String(className).trim()
+        );
 
+      });
+
+    if (!classStudents.length) {
+
+      if (body) {
         body.innerHTML =
-          '<tr><td colspan="7" style="padding:15px;text-align:center;color:#991b1b;">' +
-          escapeHtml(
-            (data && data.message) ||
-            "Gagal mendapatkan senarai murid."
-          ) +
-          "</td></tr>";
-
-        return;
+          '<tr><td colspan="7" style="padding:15px;text-align:center;">Tiada murid dalam kelas ini.</td></tr>';
       }
 
-      if (data.schoolDay === false) {
-
-        statusBox.innerHTML =
-          '<div style="padding:10px;border-radius:8px;background:#fef3c7;color:#92400e;">' +
-          "🏖️ Tarikh ini bukan hari persekolahan. " +
-          escapeHtml(
-            data.calendarDescription ||
-            data.calendarStatus ||
-            ""
-          ) +
-          "</div>";
-
-        card.style.display =
-          "none";
-
-        return;
-      }
-
-      statusBox.innerHTML =
-        '<div style="padding:10px;border-radius:8px;background:#dcfce7;color:#166534;">' +
-        "🟢 Hari Persekolahan — boleh mengambil kehadiran secara manual." +
-        "</div>";
-
-      renderManualAttendance(
-        data.students || []
-      );
+      return;
 
     }
-  );
+
+    /*
+     * Ask the backend for existing attendance records.
+     * If that API is unavailable, we still show the imported
+     * students so Manual is not blank.
+     */
+    const url =
+      SATS_API +
+      "?action=getManualAttendance" +
+      "&date=" +
+      encodeURIComponent(date) +
+      "&className=" +
+      encodeURIComponent(className);
+
+    callSATS(
+      url,
+      function(data) {
+
+        if (
+          data &&
+          data.success &&
+          Array.isArray(data.students)
+        ) {
+
+          if (
+            statusBox &&
+            data.schoolDay === false
+          ) {
+
+            statusBox.innerHTML =
+              '<div style="padding:10px;border-radius:8px;background:#fef3c7;color:#92400e;">' +
+              "🏖️ Tarikh ini bukan hari persekolahan. " +
+              escapeHtml(
+                data.calendarDescription ||
+                data.calendarStatus ||
+                ""
+              ) +
+              "</div>";
+
+            if (card) {
+              card.style.display = "none";
+            }
+
+            return;
+
+          }
+
+          if (statusBox) {
+            statusBox.innerHTML =
+              '<div style="padding:10px;border-radius:8px;background:#dcfce7;color:#166534;">' +
+              "🟢 Hari Persekolahan — boleh mengambil kehadiran secara manual." +
+              "</div>";
+          }
+
+          renderManualAttendance(
+            data.students
+          );
+
+          return;
+
+        }
+
+        renderManualAttendance(
+          classStudents.map(function(student) {
+            return {
+              id: student.id,
+              name: student.name,
+              className: student.className,
+              status: "Hadir",
+              reason: "",
+              note: "",
+              lockedByQR: false
+            };
+          })
+        );
+
+      },
+      function(error) {
+
+        console.warn(
+          "getManualAttendance gagal; menggunakan Data Murid import.",
+          error
+        );
+
+        renderManualAttendance(
+          classStudents.map(function(student) {
+            return {
+              id: student.id,
+              name: student.name,
+              className: student.className,
+              status: "Hadir",
+              reason: "",
+              note: "",
+              lockedByQR: false
+            };
+          })
+        );
+
+      }
+    );
+
+  });
 
 }
 
@@ -6237,24 +6442,55 @@ function saveManualAttendance() {
 
 function loadStudents() {
 
-  /*
-   * Compatibility wrapper.
-   * All student loading now goes through one path.
-   */
+  const container =
+    document.getElementById(
+      "studentsList"
+    ) ||
+    document.getElementById(
+      "studentList"
+    );
+
+  if (container) {
+    container.innerHTML =
+      "<div class='card'>" +
+      "Memuatkan data murid..." +
+      "</div>";
+  }
+
   ensureStudentsLoaded(
     function(students) {
 
-      syncImportedStudentView(
-        students
-      );
+      if (
+        typeof renderStudents ===
+        "function"
+      ) {
+
+        renderStudents(
+          students
+        );
+
+      }
+
+      if (
+        typeof populateStudentClassFilter ===
+        "function"
+      ) {
+
+        populateStudentClassFilter();
+
+      } else if (
+        typeof populateStudentClasses ===
+        "function"
+      ) {
+
+        populateStudentClasses();
+
+      }
 
     }
   );
 
 }
-
-
-
 
 
 function populateClassDropdowns() {
