@@ -5008,10 +5008,11 @@ function showStudentsLoadingState() {
 
 }
 
-function ensureStudentsLoaded(done) {
+function ensureStudentsLoaded(
+  done
+) {
 
   if (
-    satsStudentsReady &&
     Array.isArray(allStudents) &&
     allStudents.length
   ) {
@@ -5021,154 +5022,23 @@ function ensureStudentsLoaded(done) {
     }
 
     return;
+
   }
 
-  if (window.satsStudentsLoading) {
-
-    window.satsStudentsWaiters =
-      window.satsStudentsWaiters || [];
-
-    if (typeof done === "function") {
-      window.satsStudentsWaiters.push(done);
-    }
-
-    return;
-  }
-
-  window.satsStudentsLoading =
-    true;
-
-  window.satsStudentsWaiters =
-    [];
-
-  if (typeof done === "function") {
-    window.satsStudentsWaiters.push(done);
-  }
-
-  callSATS(
-    SATS_API +
-    "?action=getStudents",
-
-    function(data) {
-
-      window.satsStudentsLoading =
-        false;
+  loadStudentsDirectFromSheet(
+    function(
+      students
+    ) {
 
       if (
-        data &&
-        data.success === true &&
-        Array.isArray(data.students) &&
-        data.students.length
+        typeof done === "function"
       ) {
-
-        allStudents =
-          data.students.map(
-            function(student) {
-
-              return {
-
-                id:
-                  String(
-                    student.id || ""
-                  ).trim(),
-
-                name:
-                  String(
-                    student.name || ""
-                  ).trim(),
-
-                className:
-                  String(
-                    student.className || ""
-                  ).trim(),
-
-                rmt:
-                  String(
-                    student.rmt || ""
-                  ).trim(),
-
-                qr:
-                  String(
-                    student.qr || ""
-                  ).trim(),
-
-                profile:
-                  String(
-                    student.profile || ""
-                  ).trim(),
-
-                file:
-                  String(
-                    student.file || ""
-                  ).trim()
-
-              };
-
-            }
-          );
-
-        allClasses =
-          Array.from(
-            new Set(
-              allStudents
-                .map(
-                  function(student) {
-                    return String(
-                      student.className || ""
-                    ).trim();
-                  }
-                )
-                .filter(Boolean)
-            )
-          ).sort(
-            function(a, b) {
-
-              return a.localeCompare(
-                b,
-                undefined,
-                {
-                  numeric: true,
-                  sensitivity: "base"
-                }
-              );
-
-            }
-          );
-
-        satsStudentsReady =
-          true;
-
-      } else {
-
-        satsStudentsReady =
-          false;
-
+        done(
+          Array.isArray(students)
+            ? students
+            : []
+        );
       }
-
-      const waiters =
-        window.satsStudentsWaiters || [];
-
-      window.satsStudentsWaiters =
-        [];
-
-      waiters.forEach(
-        function(waiter) {
-
-          try {
-            waiter(
-              satsStudentsReady
-                ? allStudents
-                : []
-            );
-          } catch(error) {
-            console.warn(
-              "Student waiter error:",
-              error
-            );
-          }
-
-        }
-      );
 
     }
   );
@@ -6258,6 +6128,386 @@ function clearStudentCache() {
 }
 
 
+
+/* =====================================================
+   DIRECT GOOGLE SHEET — DATA MURID
+   ===================================================== */
+
+const STUDENT_SHEET_ID =
+  "1cPKaTqB2b5HLSE8__v7Uz_ry5ESI_26joiNH5ioFtws";
+
+const STUDENT_SHEET_NAME =
+  "Data Murid";
+
+const STUDENT_SHEET_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/" +
+  STUDENT_SHEET_ID +
+  "/gviz/tq?tqx=out:csv&sheet=" +
+  encodeURIComponent(
+    STUDENT_SHEET_NAME
+  );
+
+
+function parseStudentCsv(text) {
+
+  const rows = [];
+  let row = [];
+  let field = "";
+  let quoted = false;
+
+  for (
+    let i = 0;
+    i < text.length;
+    i++
+  ) {
+
+    const ch =
+      text[i];
+
+    const next =
+      text[i + 1];
+
+    if (ch === '"') {
+
+      if (
+        quoted &&
+        next === '"'
+      ) {
+
+        field += '"';
+        i++;
+        continue;
+
+      }
+
+      quoted =
+        !quoted;
+
+      continue;
+
+    }
+
+    if (
+      ch === "," &&
+      !quoted
+    ) {
+
+      row.push(field);
+      field = "";
+
+      continue;
+
+    }
+
+    if (
+      (ch === "\n" || ch === "\r") &&
+      !quoted
+    ) {
+
+      if (
+        ch === "\r" &&
+        next === "\n"
+      ) {
+        i++;
+      }
+
+      row.push(field);
+      field = "";
+
+      if (
+        row.length > 1 ||
+        row[0] !== ""
+      ) {
+        rows.push(row);
+      }
+
+      row = [];
+
+      continue;
+
+    }
+
+    field += ch;
+
+  }
+
+  if (
+    field !== "" ||
+    row.length
+  ) {
+
+    row.push(field);
+
+    if (
+      row.length > 1 ||
+      row[0] !== ""
+    ) {
+      rows.push(row);
+    }
+
+  }
+
+  return rows;
+
+}
+
+
+
+function loadStudentsDirectFromSheet(
+  done
+) {
+
+  const url =
+    STUDENT_SHEET_CSV_URL +
+    "&_=" +
+    Date.now();
+
+  fetch(
+    url,
+    {
+      method:
+        "GET",
+
+      cache:
+        "no-store",
+
+      credentials:
+        "omit"
+    }
+  )
+  .then(
+    function(response) {
+
+      if (!response.ok) {
+
+        throw new Error(
+          "Google Sheet HTTP " +
+          response.status
+        );
+
+      }
+
+      return response.text();
+
+    }
+  )
+  .then(
+    function(csvText) {
+
+      const rows =
+        parseStudentCsv(
+          csvText
+        );
+
+      if (
+        !rows.length
+      ) {
+
+        throw new Error(
+          "Data Murid kosong."
+        );
+
+      }
+
+      const header =
+        rows[0].map(
+          function(value) {
+            return String(
+              value || ""
+            )
+              .trim()
+              .toUpperCase();
+          }
+        );
+
+      const idIndex =
+        header.indexOf("ID");
+
+      const nameIndex =
+        header.indexOf(
+          "NAMA MURID"
+        );
+
+      const classIndex =
+        header.indexOf(
+          "KELAS"
+        );
+
+      const rmtIndex =
+        header.indexOf(
+          "RMT"
+        );
+
+      const qrIndex =
+        header.indexOf(
+          "QR CODE"
+        );
+
+      const profileIndex =
+        header.indexOf(
+          "PROFILE PICTURE"
+        );
+
+      const fileIndex =
+        header.indexOf(
+          "FILE"
+        );
+
+      if (
+        idIndex < 0 ||
+        nameIndex < 0 ||
+        classIndex < 0 ||
+        rmtIndex < 0
+      ) {
+
+        throw new Error(
+          "Header Data Murid tidak lengkap. " +
+          "Perlu ID, NAMA MURID, KELAS dan RMT."
+        );
+
+      }
+
+      const students =
+        rows
+          .slice(1)
+          .map(
+            function(row) {
+
+              return {
+
+                id:
+                  String(
+                    row[idIndex] || ""
+                  ).trim(),
+
+                name:
+                  String(
+                    row[nameIndex] || ""
+                  ).trim(),
+
+                className:
+                  String(
+                    row[classIndex] || ""
+                  ).trim(),
+
+                rmt:
+                  String(
+                    row[rmtIndex] || ""
+                  ).trim(),
+
+                qr:
+                  qrIndex >= 0
+                    ? String(
+                        row[qrIndex] || ""
+                      ).trim()
+                    : "",
+
+                profile:
+                  profileIndex >= 0
+                    ? String(
+                        row[profileIndex] || ""
+                      ).trim()
+                    : "",
+
+                file:
+                  fileIndex >= 0
+                    ? String(
+                        row[fileIndex] || ""
+                      ).trim()
+                    : ""
+
+              };
+
+            }
+          )
+          .filter(
+            function(student) {
+              return Boolean(
+                student.id
+              );
+            }
+          );
+
+      if (
+        !students.length
+      ) {
+
+        throw new Error(
+          "Tiada ID murid ditemui dalam Data Murid."
+        );
+
+      }
+
+      allStudents =
+        students;
+
+      /*
+       * Kelas datang terus daripada
+       * Column C / KELAS dalam Data Murid.
+       */
+      allClasses =
+        Array.from(
+          new Set(
+            students
+              .map(
+                function(student) {
+                  return student.className;
+                }
+              )
+              .filter(Boolean)
+          )
+        ).sort(
+          function(a, b) {
+            return a.localeCompare(
+              b,
+              undefined,
+              {
+                numeric: true,
+                sensitivity: "base"
+              }
+            );
+          }
+        );
+
+      satsStudentsReady =
+        true;
+
+      if (
+        typeof done === "function"
+      ) {
+        done(
+          students
+        );
+      }
+
+    }
+  )
+  .catch(
+    function(error) {
+
+      console.error(
+        "Direct Google Sheet error:",
+        error
+      );
+
+      satsStudentsReady =
+        false;
+
+      if (
+        typeof done === "function"
+      ) {
+        done(
+          [],
+          error
+        );
+      }
+
+    }
+  );
+
+}
+
+
 function loadStudents() {
 
   const container =
@@ -6271,24 +6521,18 @@ function loadStudents() {
 
   container.innerHTML =
     "<div class='loading'>" +
-    "⏳ Menyambung ke Data Murid..." +
+    "⏳ Membaca Data Murid terus daripada Google Sheet..." +
     "</div>";
 
-  callSATS(
-    SATS_API +
-    "?action=getStudents",
-
-    function(data) {
-
-      console.log(
-        "SATS getStudents:",
-        data
-      );
+  loadStudentsDirectFromSheet(
+    function(
+      students,
+      error
+    ) {
 
       if (
-        !data ||
-        data.success !== true ||
-        !Array.isArray(data.students)
+        !Array.isArray(students) ||
+        !students.length
       ) {
 
         container.innerHTML =
@@ -6296,99 +6540,21 @@ function loadStudents() {
           "<strong>Data Murid tidak dapat dimuatkan.</strong>" +
           "<br><br>" +
           escapeHtml(
-            (
-              data &&
-              data.message
-            ) ||
-            "Tiada data murid diterima daripada SATS."
+            error &&
+            error.message
+              ? error.message
+              : "Google Sheet tidak dapat dibaca oleh browser."
           ) +
+          "<br><br>" +
+          "<small>Sumber: Data Murid → " +
+          escapeHtml(
+            STUDENT_SHEET_NAME
+          ) +
+          "</small>" +
           "</div>";
 
-        satsStudentsReady = false;
         return;
       }
-
-      allStudents =
-        data.students.map(
-          function(student) {
-
-            return {
-
-              id:
-                String(
-                  student.id || ""
-                ).trim(),
-
-              name:
-                String(
-                  student.name || ""
-                ).trim(),
-
-              className:
-                String(
-                  student.className || ""
-                ).trim(),
-
-              rmt:
-                String(
-                  student.rmt || ""
-                ).trim(),
-
-              qr:
-                String(
-                  student.qr || ""
-                ).trim(),
-
-              profile:
-                String(
-                  student.profile || ""
-                ).trim(),
-
-              file:
-                String(
-                  student.file || ""
-                ).trim()
-
-            };
-
-          }
-        );
-
-      /*
-       * CLASS SOURCE OF TRUTH:
-       * student.className comes from
-       * Data Murid column C in Code.gs.
-       */
-      allClasses =
-        Array.from(
-          new Set(
-            allStudents
-              .map(
-                function(student) {
-                  return String(
-                    student.className || ""
-                  ).trim();
-                }
-              )
-              .filter(Boolean)
-          )
-        ).sort(
-          function(a, b) {
-
-            return a.localeCompare(
-              b,
-              undefined,
-              {
-                numeric: true,
-                sensitivity: "base"
-              }
-            );
-
-          }
-        );
-
-      satsStudentsReady =
-        allStudents.length > 0;
 
       selectedStudentIds.clear();
 
@@ -6407,6 +6573,12 @@ function loadStudents() {
 
       updatePrintButton(
         allStudents.length
+      );
+
+      console.log(
+        "Data Murid direct Google Sheet:",
+        allStudents.length,
+        "murid"
       );
 
     }
@@ -10244,7 +10416,6 @@ function deleteClassSetting(
       data.classes || []
     );
 
-    loadClasses();
     loadStudents();
 
   });
