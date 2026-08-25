@@ -1134,10 +1134,6 @@
       display: none !important;
     }
 
-
-/* IMPORT MODE: student data is read-only from IMPORTRANGE */
-#studentAddCard { display:none !important; }
-.student-mutation-button { display:none !important; }
 </style>
 
 
@@ -2176,7 +2172,7 @@ input:focus-visible {
 
   <!-- ADD STUDENT -->
 
-  <div id="studentAddCard" class="card">
+  <div class="card">
 
     <h3>
       ➕ Tambah Murid
@@ -2317,7 +2313,7 @@ input:focus-visible {
 
       <button
         type="button"
-        class="edit-button student-mutation-button"
+        class="edit-button"
         onclick="cancelEditStudent()"
       >
         Batal
@@ -2842,6 +2838,7 @@ function showPage(pageName) {
 
     stopScanner();
 
+    loadClasses();
     loadStudents();
 
   }
@@ -5085,119 +5082,125 @@ function ensureStudentsLoaded(
     Array.isArray(allStudents)
   ) {
 
-    if (typeof done === "function") {
-      done(allStudents);
+    if (
+      typeof done ===
+      "function"
+    ) {
+      done(
+        allStudents
+      );
     }
 
     return;
   }
 
-  if (window.satsStudentsLoading) {
+
+  // Prevent duplicate student requests.
+  if (
+    window.satsStudentsLoading
+  ) {
 
     window.satsStudentsWaiters =
-      window.satsStudentsWaiters || [];
+      window.satsStudentsWaiters ||
+      [];
 
-    if (typeof done === "function") {
-      window.satsStudentsWaiters.push(done);
+    if (
+      typeof done ===
+      "function"
+    ) {
+      window.satsStudentsWaiters.push(
+        done
+      );
     }
 
     return;
+
   }
 
-  window.satsStudentsLoading = true;
 
-  window.satsStudentsWaiters = [];
+  window.satsStudentsLoading =
+    true;
 
-  if (typeof done === "function") {
-    window.satsStudentsWaiters.push(done);
+  showStudentsLoadingState();
+
+  window.satsStudentsWaiters =
+    [];
+
+  if (
+    typeof done ===
+    "function"
+  ) {
+    window.satsStudentsWaiters.push(
+      done
+    );
   }
+
 
   callSATS(
-    SATS_API + "?action=getStudents",
+    SATS_API +
+    "?action=getStudents",
     function(data) {
 
-      window.satsStudentsLoading = false;
+      window.satsStudentsLoading =
+        false;
 
       if (
         data &&
-        data.success &&
-        Array.isArray(data.students)
+        data.success
       ) {
 
         allStudents =
-          data.students.map(function(student) {
-            return {
-              id:
-                String(student.id || "").trim(),
-              name:
-                String(student.name || "").trim(),
-              className:
-                String(student.className || "").trim(),
-              rmt:
-                String(student.rmt || "").trim(),
-              qr:
-                String(student.qr || "").trim(),
-              profile:
-                String(student.profile || "").trim(),
-              file:
-                String(student.file || "").trim()
-            };
-          });
+          Array.isArray(
+            data.students
+          )
+            ? data.students
+            : [];
 
-        satsStudentsReady = true;
+        satsStudentsReady =
+          true;
 
-        allClasses =
-          Array.from(
-            new Set(
-              allStudents
-                .map(function(student) {
-                  return student.className;
-                })
-                .filter(Boolean)
-            )
-          ).sort(function(a,b) {
-            return a.localeCompare(
-              b,
-              undefined,
-              {
-                numeric: true,
-                sensitivity: "base"
-              }
-            );
-          });
-
-      } else {
-
-        allStudents = [];
-        satsStudentsReady = false;
+        renderStudentDataFromCache();
 
       }
 
+
       const waiters =
-        window.satsStudentsWaiters || [];
+        window.satsStudentsWaiters ||
+        [];
 
-      window.satsStudentsWaiters = [];
+      window.satsStudentsWaiters =
+        [];
 
-      waiters.forEach(function(waiter) {
-        try {
-          waiter(
-            satsStudentsReady
-              ? allStudents
-              : []
-          );
-        } catch(error) {
-          console.warn(
-            "Student waiter error:",
-            error
-          );
+
+      waiters.forEach(
+        function(waiter) {
+
+          try {
+
+            waiter(
+              satsStudentsReady
+                ? allStudents
+                : []
+            );
+
+          }
+
+          catch(error) {
+
+            console.warn(
+              "Student waiter error:",
+              error
+            );
+
+          }
+
         }
-      });
+      );
 
     }
   );
 
 }
-
 
 
 function populateAllClassSelectors() {
@@ -5605,43 +5608,23 @@ function prepareManualAttendancePage() {
       getTodayDateInput();
   }
 
-  ensureStudentsLoaded(
-    function(students) {
+  if (!allClasses.length) {
 
-      allStudents =
-        Array.isArray(students)
-          ? students
-          : [];
+    populateManualClasses();
 
-      allClasses =
-        Array.from(
-          new Set(
-            allStudents
-              .map(function(student) {
-                return String(
-                  student.className || ""
-                ).trim();
-              })
-              .filter(Boolean)
-          )
-        ).sort(function(a, b) {
-          return a.localeCompare(
-            b,
-            undefined,
-            {
-              numeric: true,
-              sensitivity: "base"
-            }
-          );
-        });
+    loadClasses(
+      function() {
+        populateManualClasses();
+      }
+    );
 
-      populateManualClasses();
+    return;
 
-    }
-  );
+  }
+
+  populateManualClasses();
 
 }
-
 
 
 function populateManualClasses() {
@@ -5718,11 +5701,11 @@ function manualReasonOptions(reason, locked) {
 
 function loadManualAttendance() {
 
-  const dateEl =
-    document.getElementById("manualDate");
+  const date =
+    document.getElementById("manualDate").value;
 
-  const classEl =
-    document.getElementById("manualClass");
+  const className =
+    document.getElementById("manualClass").value;
 
   const card =
     document.getElementById("manualAttendanceCard");
@@ -5733,124 +5716,71 @@ function loadManualAttendance() {
   const statusBox =
     document.getElementById("manualCalendarStatus");
 
-  const date =
-    dateEl ? dateEl.value : "";
-
-  const className =
-    classEl ? classEl.value : "";
-
   if (!date || !className) {
     alert("Sila pilih tarikh dan kelas.");
     return;
   }
 
-  if (body) {
-    body.innerHTML =
-      '<tr><td colspan="7" style="padding:15px;text-align:center;">Memuatkan senarai murid...</td></tr>';
-  }
+  body.innerHTML =
+    '<tr><td colspan="7" style="padding:15px;text-align:center;">Memuatkan senarai murid...</td></tr>';
 
-  if (card) {
-    card.style.display = "block";
-  }
+  card.style.display =
+    "block";
 
-  ensureStudentsLoaded(
-    function(students) {
+  callSATS(
+    SATS_API +
+    "?action=getManualAttendance" +
+    "&date=" +
+    encodeURIComponent(date) +
+    "&className=" +
+    encodeURIComponent(className),
 
-      const importedStudents =
-        (Array.isArray(students) ? students : [])
-          .filter(function(student) {
-            return (
-              String(student.className || "").trim() ===
-              String(className).trim()
-            );
-          });
+    function(data) {
 
-      if (!importedStudents.length) {
-        if (body) {
-          body.innerHTML =
-            '<tr><td colspan="7" style="padding:15px;text-align:center;">Tiada murid dalam kelas ini.</td></tr>';
-        }
+      if (!data || !data.success) {
+
+        body.innerHTML =
+          '<tr><td colspan="7" style="padding:15px;text-align:center;color:#991b1b;">' +
+          escapeHtml(
+            (data && data.message) ||
+            "Gagal mendapatkan senarai murid."
+          ) +
+          "</td></tr>";
+
         return;
       }
 
-      const fallbackRows =
-        importedStudents.map(function(student) {
-          return {
-            id: student.id,
-            name: student.name,
-            className: student.className,
-            status: "Hadir",
-            reason: "",
-            note: "",
-            lockedByQR: false
-          };
-        });
+      if (data.schoolDay === false) {
 
-      const url =
-        SATS_API +
-        "?action=getManualAttendance" +
-        "&date=" +
-        encodeURIComponent(date) +
-        "&className=" +
-        encodeURIComponent(className);
+        statusBox.innerHTML =
+          '<div style="padding:10px;border-radius:8px;background:#fef3c7;color:#92400e;">' +
+          "🏖️ Tarikh ini bukan hari persekolahan. " +
+          escapeHtml(
+            data.calendarDescription ||
+            data.calendarStatus ||
+            ""
+          ) +
+          "</div>";
 
-      callSATS(
-        url,
-        function(data) {
+        card.style.display =
+          "none";
 
-          if (
-            data &&
-            data.success &&
-            Array.isArray(data.students)
-          ) {
+        return;
+      }
 
-            if (data.schoolDay === false) {
+      statusBox.innerHTML =
+        '<div style="padding:10px;border-radius:8px;background:#dcfce7;color:#166534;">' +
+        "🟢 Hari Persekolahan — boleh mengambil kehadiran secara manual." +
+        "</div>";
 
-              if (statusBox) {
-                statusBox.innerHTML =
-                  '<div style="padding:10px;border-radius:8px;background:#fef3c7;color:#92400e;">' +
-                  "🏖️ Tarikh ini bukan hari persekolahan. " +
-                  escapeHtml(
-                    data.calendarDescription ||
-                    data.calendarStatus ||
-                    ""
-                  ) +
-                  "</div>";
-              }
-
-              if (card) {
-                card.style.display = "none";
-              }
-
-              return;
-            }
-
-            if (statusBox) {
-              statusBox.innerHTML =
-                '<div style="padding:10px;border-radius:8px;background:#dcfce7;color:#166534;">' +
-                "🟢 Hari Persekolahan — boleh mengambil kehadiran secara manual." +
-                "</div>";
-            }
-
-            renderManualAttendance(
-              data.students
-            );
-
-            return;
-          }
-
-          renderManualAttendance(
-            fallbackRows
-          );
-
-        }
+      renderManualAttendance(
+        data.students || []
       );
 
     }
   );
 
 }
-
 
 
 function renderManualAttendance(
@@ -6077,79 +6007,64 @@ function saveManualAttendance() {
 
 function loadStudents() {
 
-  const container =
-    document.getElementById("studentList");
 
-  if (!container) {
-    return;
-  }
+  const container =
+    document.getElementById(
+      "studentList"
+    );
+
 
   container.innerHTML =
-    "<div class='loading'>⏳ Memuatkan data murid...</div>";
+    "<div class='loading'>" +
+    "⏳ Memuatkan data murid..." +
+    "</div>";
+
 
   const url =
     SATS_API +
     "?action=getStudents";
+
 
   callSATS(
     url,
     function(data) {
 
       if (
-        !data ||
         !data.success
       ) {
 
         container.innerHTML =
           "<div class='card error'>" +
           escapeHtml(
-            (data && data.message) ||
+            data.message ||
             "Gagal mendapatkan data murid."
           ) +
           "</div>";
 
         return;
+
       }
 
+
       allStudents =
-        Array.isArray(data.students)
-          ? data.students.map(function(student) {
-              return {
-                id:
-                  String(student.id || "").trim(),
+        data.students ||
+        [];
 
-                name:
-                  String(student.name || "").trim(),
+      selectedStudentIds.clear();
 
-                className:
-                  String(student.className || "").trim(),
+      // Clear any previous connection/error message.
+      container.innerHTML = "";
 
-                rmt:
-                  String(student.rmt || "").trim(),
-
-                qr:
-                  String(student.qr || "").trim(),
-
-                profile:
-                  String(student.profile || "").trim(),
-
-                file:
-                  String(student.file || "").trim()
-              };
-            })
-          : [];
-
-      /*
-       * IMPORTANT:
-       * Classes for this school are derived from Data Murid.
-       * No getClasses request is required for this page.
-       */
+      // Build the class dropdown directly from the student data.
+      // This avoids a second API request when opening Data Murid.
       allClasses =
         Array.from(
           new Set(
             allStudents
               .map(function(student) {
-                return student.className;
+                return String(
+                  student.className || ""
+                ).trim();
               })
               .filter(Boolean)
           )
@@ -6157,17 +6072,9 @@ function loadStudents() {
           return a.localeCompare(
             b,
             undefined,
-            {
-              numeric: true,
-              sensitivity: "base"
-            }
+            {numeric: true}
           );
         });
-
-      satsStudentsReady = true;
-      window.satsStudentsLoading = false;
-
-      selectedStudentIds.clear();
 
       populateClassDropdowns();
 
@@ -6175,34 +6082,12 @@ function loadStudents() {
         allStudents
       );
 
-      updatePrintButton(
-        allStudents.length
-      );
-
-      /*
-       * Wake any Manual-page waiters.
-       */
-      const waiters =
-        window.satsStudentsWaiters || [];
-
-      window.satsStudentsWaiters = [];
-
-      waiters.forEach(function(waiter) {
-        try {
-          waiter(allStudents);
-        } catch(error) {
-          console.warn(
-            "Student waiter error:",
-            error
-          );
-        }
-      });
+      updatePrintButton(allStudents.length);
 
     }
   );
 
 }
-
 
 
 function populateClassDropdowns() {
@@ -6322,13 +6207,6 @@ function renderStudents(
                 "Kelas: " +
                 escapeHtml(
                   student.className
-                ) +
-              "</div>" +
-
-              "<div class='student-card-info'>" +
-                "RMT: " +
-                escapeHtml(
-                  student.rmt || "-"
                 ) +
               "</div>" +
 
@@ -8060,228 +7938,157 @@ function startScanner() {
     scannerFacingMode
   );
 
-  const reader =
-    document.getElementById("reader");
-
-  const status =
-    document.getElementById("scannerStatus");
-
-  if (!reader || !status) {
-    console.error(
-      "Elemen scanner #reader/#scannerStatus tidak ditemui."
-    );
-    return;
-  }
 
   if (
-    typeof Html5Qrcode ===
-    "undefined"
+    scannerRunning
   ) {
 
-    status.innerText =
-      "Scanner QR belum dimuatkan. Sila refresh halaman.";
-
-    console.error(
-      "html5-qrcode library tidak dimuatkan."
-    );
-
     return;
+
   }
 
-  if (scannerRunning) {
-    return;
-  }
 
-  processingScan = false;
+  processingScan =
+    false;
 
-  status.innerText =
+
+  document
+    .getElementById(
+      "scannerStatus"
+    )
+    .innerText =
     "Membuka kamera...";
 
-  /*
-   * Clear any leftover scanner instance from
-   * an earlier failed start.
-   */
-  if (scanner) {
 
-    try {
-      scanner.clear();
-    } catch(error) {
-      console.warn(
-        "Scanner lama tidak dapat clear:",
-        error
+  try {
+
+    scanner =
+      new Html5Qrcode(
+        "reader"
       );
-    }
 
-    scanner = null;
   }
 
-  scanner =
-    new Html5Qrcode("reader");
+  catch(error) {
 
-  /*
-   * Ask the browser for available cameras.
-   * This is more reliable on phones than relying
-   * only on facingMode.
-   */
-  Html5Qrcode
-    .getCameras()
-    .then(function(cameras) {
+    console.error(error);
+
+    return;
+
+  }
+
+
+  scanner.start(
+
+    {
+      facingMode:
+        scannerFacingMode
+    },
+
+    {
+
+      fps: 10,
+
+      qrbox: {
+
+        width: 250,
+
+        height: 250
+
+      }
+
+    },
+
+    function(decodedText) {
+
 
       if (
-        !Array.isArray(cameras) ||
-        !cameras.length
+        processingScan
       ) {
 
-        throw new Error(
-          "Tiada kamera ditemui pada peranti."
+        return;
+
+      }
+
+
+      processingScan =
+        true;
+
+
+      try {
+
+        scanner.pause(
+          true
         );
 
       }
 
-      let selectedCamera =
-        cameras[0];
+      catch(error) {}
 
-      if (
-        scannerFacingMode ===
-        "environment"
-      ) {
 
-        const backCamera =
-          cameras.find(function(camera) {
-
-            return /back|rear|environment/i
-              .test(
-                camera.label || ""
-              );
-
-          });
-
-        if (backCamera) {
-          selectedCamera =
-            backCamera;
-        }
-
-      } else {
-
-        const frontCamera =
-          cameras.find(function(camera) {
-
-            return /front|user|facetime/i
-              .test(
-                camera.label || ""
-              );
-
-          });
-
-        if (frontCamera) {
-          selectedCamera =
-            frontCamera;
-        }
-
-      }
-
-      return scanner.start(
-        selectedCamera.id,
-        {
-          fps: 10,
-          qrbox: {
-            width: 250,
-            height: 250
-          },
-          aspectRatio: 1.0
-        },
-        function(decodedText) {
-
-          if (processingScan) {
-            return;
-          }
-
-          processingScan = true;
-
-          try {
-            scanner.pause(true);
-          } catch(error) {}
-
-          processScan(
-            decodedText
-          );
-
-        },
-        function(errorMessage) {
-          /*
-           * Normal frame-by-frame QR
-           * decode failures are ignored.
-           */
-        }
+      processScan(
+        decodedText
       );
 
-    })
-    .then(function() {
+    },
 
-      scannerRunning = true;
-      processingScan = false;
+    function(errorMessage) {
 
-      status.innerText =
+      // Normal QR scanner errors
+      // are intentionally ignored.
+
+    }
+
+  )
+
+  .then(
+    function() {
+
+      scannerRunning =
+        true;
+
+      processingScan =
+        false;
+
+
+      document
+        .getElementById(
+          "scannerStatus"
+        )
+        .innerText =
         "Kamera sedia. Sila imbas QR.";
 
-    })
-    .catch(function(error) {
+    }
+  )
+
+  .catch(
+    function(error) {
 
       console.error(
-        "Kamera gagal dibuka:",
         error
       );
 
-      scannerRunning = false;
-      processingScan = false;
 
-      try {
-        if (scanner) {
-          scanner.clear();
-        }
-      } catch(clearError) {}
+      scannerRunning =
+        false;
 
-      scanner = null;
 
-      let message =
-        "Kamera tidak dapat dibuka.";
+      document
+        .getElementById(
+          "scannerStatus"
+        )
+        .innerText =
+        "Kamera tidak dapat dibuka. Sila benarkan akses kamera.";
 
-      if (
-        error &&
-        error.name ===
-        "NotAllowedError"
-      ) {
-
-        message =
-          "Akses kamera ditolak. Sila benarkan kamera untuk laman SATS dan cuba lagi.";
-
-      } else if (
-        error &&
-        error.name ===
-        "NotFoundError"
-      ) {
-
-        message =
-          "Tiada kamera ditemui pada peranti.";
-
-      } else if (
-        error &&
-        error.message
-      ) {
-
-        message =
-          "Kamera tidak dapat dibuka: " +
-          error.message;
-
-      }
-
-      status.innerText =
-        message;
-
-    });
+    }
+  );
 
 }
 
+
+/* =================================================
+   PROCESS QR SCAN
+   ================================================= */
 
 function processScan(
   qrCode
