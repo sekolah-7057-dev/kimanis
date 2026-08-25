@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+a<!DOCTYPE html>
 <html lang="ms">
 
 <head>
@@ -5017,8 +5017,13 @@ function ensureStudentsLoaded(
     allStudents.length
   ) {
 
-    if (typeof done === "function") {
-      done(allStudents);
+    if (
+      typeof done ===
+      "function"
+    ) {
+      done(
+        allStudents
+      );
     }
 
     return;
@@ -5031,13 +5036,18 @@ function ensureStudentsLoaded(
     ) {
 
       if (
-        typeof done === "function"
+        typeof done ===
+        "function"
       ) {
+
         done(
-          Array.isArray(students)
+          Array.isArray(
+            students
+          )
             ? students
             : []
         );
+
       }
 
     }
@@ -5444,7 +5454,9 @@ function getTodayDateInput() {
 function prepareManualAttendancePage() {
 
   const date =
-    document.getElementById("manualDate");
+    document.getElementById(
+      "manualDate"
+    );
 
   if (
     date &&
@@ -5454,32 +5466,70 @@ function prepareManualAttendancePage() {
       getTodayDateInput();
   }
 
-  ensureStudentsLoaded(
-    function(students) {
+  /*
+   * Read students directly from the same
+   * Google Sheet source used by Data Murid
+   * and Dashboard.
+   */
+  loadStudentsDirectFromSheet(
+    function(
+      students,
+      error
+    ) {
+
+      if (
+        !Array.isArray(students) ||
+        !students.length
+      ) {
+
+        const select =
+          document.getElementById(
+            "manualClass"
+          );
+
+        if (select) {
+
+          select.innerHTML =
+            '<option value="">Data murid tidak dapat dimuatkan</option>';
+
+        }
+
+        console.error(
+          "Manual attendance student source:",
+          error
+        );
+
+        return;
+      }
 
       allStudents =
-        Array.isArray(students)
-          ? students
-          : [];
+        students;
 
       allClasses =
         Array.from(
           new Set(
-            allStudents
-              .map(function(student) {
-                return String(
-                  student.className || ""
-                ).trim();
-              })
+            students
+              .map(
+                function(student) {
+                  return String(
+                    student.className || ""
+                  ).trim();
+                }
+              )
               .filter(Boolean)
           )
-        ).sort(function(a, b) {
-          return a.localeCompare(
-            b,
-            undefined,
-            {numeric: true}
-          );
-        });
+        ).sort(
+          function(a,b) {
+            return a.localeCompare(
+              b,
+              undefined,
+              {
+                numeric: true,
+                sensitivity: "base"
+              }
+            );
+          }
+        );
 
       populateManualClasses();
 
@@ -5565,85 +5615,283 @@ function manualReasonOptions(reason, locked) {
 function loadManualAttendance() {
 
   const date =
-    document.getElementById("manualDate").value;
+    document.getElementById(
+      "manualDate"
+    ).value;
 
   const className =
-    document.getElementById("manualClass").value;
+    document.getElementById(
+      "manualClass"
+    ).value;
 
   const card =
-    document.getElementById("manualAttendanceCard");
+    document.getElementById(
+      "manualAttendanceCard"
+    );
 
   const body =
-    document.getElementById("manualAttendanceBody");
+    document.getElementById(
+      "manualAttendanceBody"
+    );
 
   const statusBox =
-    document.getElementById("manualCalendarStatus");
+    document.getElementById(
+      "manualCalendarStatus"
+    );
 
   if (!date || !className) {
-    alert("Sila pilih tarikh dan kelas.");
+    alert(
+      "Sila pilih tarikh dan kelas."
+    );
     return;
   }
 
   body.innerHTML =
-    '<tr><td colspan="7" style="padding:15px;text-align:center;">Memuatkan senarai murid...</td></tr>';
+    '<tr><td colspan="7" style="padding:15px;text-align:center;">Memuatkan murid daripada Data Murid...</td></tr>';
 
   card.style.display =
     "block";
 
-  callSATS(
-    SATS_API +
-    "?action=getManualAttendance" +
-    "&date=" +
-    encodeURIComponent(date) +
-    "&className=" +
-    encodeURIComponent(className),
+  /*
+   * STEP 1:
+   * Get the student list directly from
+   * Google Sheet Data Murid.
+   */
+  loadStudentsDirectFromSheet(
+    function(
+      students,
+      studentError
+    ) {
 
-    function(data) {
-
-      if (!data || !data.success) {
+      if (
+        !Array.isArray(students) ||
+        !students.length
+      ) {
 
         body.innerHTML =
           '<tr><td colspan="7" style="padding:15px;text-align:center;color:#991b1b;">' +
           escapeHtml(
-            (data && data.message) ||
-            "Gagal mendapatkan senarai murid."
+            studentError &&
+            studentError.message
+              ? studentError.message
+              : "Data Murid tidak dapat dibaca daripada Google Sheet."
           ) +
           "</td></tr>";
 
         return;
       }
 
-      if (data.schoolDay === false) {
+      const classStudents =
+        students.filter(
+          function(student) {
 
-        statusBox.innerHTML =
-          '<div style="padding:10px;border-radius:8px;background:#fef3c7;color:#92400e;">' +
-          "🏖️ Tarikh ini bukan hari persekolahan. " +
-          escapeHtml(
-            data.calendarDescription ||
-            data.calendarStatus ||
-            ""
-          ) +
-          "</div>";
+            return (
+              String(
+                student.className || ""
+              ).trim() ===
+              String(
+                className || ""
+              ).trim()
+            );
 
-        card.style.display =
-          "none";
+          }
+        );
+
+      if (!classStudents.length) {
+
+        body.innerHTML =
+          '<tr><td colspan="7" style="padding:15px;text-align:center;">Tiada murid dalam kelas ini.</td></tr>';
 
         return;
+
       }
 
-      statusBox.innerHTML =
-        '<div style="padding:10px;border-radius:8px;background:#dcfce7;color:#166534;">' +
-        "🟢 Hari Persekolahan — boleh mengambil kehadiran secara manual." +
-        "</div>";
+      /*
+       * STEP 2:
+       * Ask SATS only for attendance/calendar
+       * information. Do NOT ask SATS for the
+       * student master list.
+       */
+      callSATS(
+        SATS_API +
+        "?action=getManualAttendance" +
+        "&date=" +
+        encodeURIComponent(date) +
+        "&className=" +
+        encodeURIComponent(className),
 
-      renderManualAttendance(
-        data.students || []
+        function(data) {
+
+          /*
+           * If SATS attendance endpoint fails,
+           * we still display the real students
+           * from Data Murid so manual attendance
+           * remains usable.
+           */
+          if (
+            !data ||
+            !data.success
+          ) {
+
+            statusBox.innerHTML =
+              '<div style="padding:10px;border-radius:8px;background:#fef3c7;color:#92400e;">' +
+              "⚠️ Data murid berjaya dimuatkan daripada Google Sheet. " +
+              "Rekod kehadiran SATS untuk tarikh ini belum dapat dibaca." +
+              "</div>";
+
+            renderManualAttendance(
+              classStudents.map(
+                function(student) {
+
+                  return {
+                    id:
+                      student.id,
+
+                    name:
+                      student.name,
+
+                    className:
+                      student.className,
+
+                    status:
+                      "Hadir",
+
+                    reason:
+                      "",
+
+                    note:
+                      "",
+
+                    lockedByQR:
+                      false
+
+                  };
+
+                }
+              )
+            );
+
+            return;
+
+          }
+
+          if (
+            data.schoolDay === false
+          ) {
+
+            statusBox.innerHTML =
+              '<div style="padding:10px;border-radius:8px;background:#fef3c7;color:#92400e;">' +
+              "🏖️ Tarikh ini bukan hari persekolahan. " +
+              escapeHtml(
+                data.calendarDescription ||
+                data.calendarStatus ||
+                ""
+              ) +
+              "</div>";
+
+            card.style.display =
+              "none";
+
+            return;
+
+          }
+
+          statusBox.innerHTML =
+            '<div style="padding:10px;border-radius:8px;background:#dcfce7;color:#166534;">' +
+            "🟢 Hari Persekolahan — boleh mengambil kehadiran secara manual." +
+            "</div>";
+
+          /*
+           * Merge SATS attendance records with
+           * the authoritative Data Murid list.
+           */
+          const attendanceRows =
+            Array.isArray(
+              data.students
+            )
+              ? data.students
+              : [];
+
+          const attendanceMap =
+            {};
+
+          attendanceRows.forEach(
+            function(item) {
+
+              const id =
+                String(
+                  item.id || ""
+                ).trim();
+
+              if (id) {
+                attendanceMap[id] =
+                  item;
+              }
+
+            }
+          );
+
+          const merged =
+            classStudents.map(
+              function(student) {
+
+                const attendance =
+                  attendanceMap[
+                    student.id
+                  ];
+
+                return {
+
+                  id:
+                    student.id,
+
+                  name:
+                    student.name,
+
+                  className:
+                    student.className,
+
+                  status:
+                    attendance &&
+                    attendance.status
+                      ? attendance.status
+                      : "Hadir",
+
+                  reason:
+                    attendance &&
+                    attendance.reason
+                      ? attendance.reason
+                      : "",
+
+                  note:
+                    attendance &&
+                    attendance.note
+                      ? attendance.note
+                      : "",
+
+                  lockedByQR:
+                    !!(
+                      attendance &&
+                      attendance.lockedByQR
+                    )
+
+                };
+
+              }
+            );
+
+          renderManualAttendance(
+            merged
+          );
+
+        }
       );
 
     }
   );
 
 }
+
 
 
 function renderManualAttendance(
