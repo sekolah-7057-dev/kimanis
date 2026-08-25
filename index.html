@@ -8026,76 +8026,167 @@ function startScanner() {
   processingScan = false;
 
   status.innerText =
-    "Membuka kamera...";
-
-  try {
-
-    if (scanner) {
-      try {
-        scanner.clear();
-      } catch(error) {}
-    }
-
-    scanner =
-      new Html5Qrcode("reader");
-
-  } catch(error) {
-
-    console.error(
-      "Gagal mencipta scanner:",
-      error
-    );
-
-    status.innerText =
-      "Scanner QR tidak dapat dimulakan.";
-
-    return;
-  }
-
-  function onSuccess(decodedText) {
-
-    if (processingScan) {
-      return;
-    }
-
-    processingScan = true;
-
-    try {
-      scanner.pause(true);
-    } catch(error) {}
-
-    processScan(
-      decodedText
-    );
-
-  }
-
-  function onError(errorMessage) {
-    /* Frame decode failures are normal. */
-  }
+    "Memeriksa akses kamera...";
 
   /*
-   * First try the browser's environment camera.
-   * If that fails, enumerate cameras and try the
-   * first available camera.
+   * IMPORTANT:
+   * Do NOT force facingMode here.
+   *
+   * On some browsers/phones, forcing
+   * facingMode can produce:
+   * "Permission denied"
+   *
+   * We first ask the browser for the
+   * available cameras, then pass the
+   * actual camera ID to html5-qrcode.
    */
-  scanner
-    .start(
-      {
-        facingMode:
-          scannerFacingMode || "environment"
-      },
-      {
-        fps: 10,
-        qrbox: {
-          width: 250,
-          height: 250
+  Html5Qrcode
+    .getCameras()
+    .then(function(cameras) {
+
+      if (
+        !Array.isArray(cameras) ||
+        cameras.length === 0
+      ) {
+
+        throw new Error(
+          "Tiada kamera ditemui."
+        );
+
+      }
+
+      let selectedCamera =
+        cameras[0];
+
+      /*
+       * Prefer the rear camera when the
+       * user selected "Kamera Belakang".
+       */
+      if (
+        scannerFacingMode ===
+        "environment"
+      ) {
+
+        const rearCamera =
+          cameras.find(
+            function(camera) {
+
+              return /back|rear|environment/i
+                .test(
+                  String(
+                    camera.label || ""
+                  )
+                );
+
+            }
+          );
+
+        if (rearCamera) {
+          selectedCamera =
+            rearCamera;
+        }
+
+      }
+
+      /*
+       * Prefer front camera when requested.
+       */
+      if (
+        scannerFacingMode ===
+        "user"
+      ) {
+
+        const frontCamera =
+          cameras.find(
+            function(camera) {
+
+              return /front|user|facetime/i
+                .test(
+                  String(
+                    camera.label || ""
+                  )
+                );
+
+            }
+          );
+
+        if (frontCamera) {
+          selectedCamera =
+            frontCamera;
+        }
+
+      }
+
+      /*
+       * Clear any previous scanner instance.
+       */
+      if (scanner) {
+
+        try {
+          scanner.clear();
+        } catch(error) {}
+
+        scanner = null;
+
+      }
+
+      scanner =
+        new Html5Qrcode(
+          "reader"
+        );
+
+      status.innerText =
+        "Membuka " +
+        (
+          selectedCamera.label ||
+          "kamera"
+        ) +
+        "...";
+
+      return scanner.start(
+
+        selectedCamera.id,
+
+        {
+          fps: 10,
+
+          qrbox: {
+            width: 250,
+            height: 250
+          },
+
+          aspectRatio: 1.0
+
         },
-        aspectRatio: 1.0
-      },
-      onSuccess,
-      onError
-    )
+
+        function(decodedText) {
+
+          if (processingScan) {
+            return;
+          }
+
+          processingScan = true;
+
+          try {
+            scanner.pause(true);
+          } catch(error) {}
+
+          processScan(
+            decodedText
+          );
+
+        },
+
+        function(errorMessage) {
+          /*
+           * Normal QR decode failures are ignored.
+           */
+        }
+
+      );
+
+    })
+
     .then(function() {
 
       scannerRunning = true;
@@ -8105,104 +8196,79 @@ function startScanner() {
         "Kamera sedia. Sila imbas QR.";
 
     })
-    .catch(function(firstError) {
 
-      console.warn(
-        "Kamera facingMode gagal:",
-        firstError
+    .catch(function(error) {
+
+      console.error(
+        "Camera error:",
+        error
       );
 
-      Html5Qrcode
-        .getCameras()
-        .then(function(cameras) {
+      scannerRunning = false;
+      processingScan = false;
 
-          if (
-            !Array.isArray(cameras) ||
-            !cameras.length
-          ) {
-            throw new Error(
-              "Tiada kamera ditemui."
-            );
-          }
+      try {
 
-          let camera =
-            cameras[0];
+        if (scanner) {
+          scanner.clear();
+        }
 
-          if (
-            scannerFacingMode ===
-            "environment"
-          ) {
+      } catch(clearError) {}
 
-            const back =
-              cameras.find(
-                function(item) {
-                  return /back|rear|environment/i
-                    .test(
-                      item.label || ""
-                    );
-                }
-              );
+      scanner = null;
 
-            if (back) {
-              camera = back;
-            }
+      let message =
+        "Kamera tidak dapat dibuka.";
 
-          }
+      /*
+       * Make the actual browser error
+       * visible instead of hiding it behind
+       * a generic "Permission denied".
+       */
+      if (
+        error &&
+        error.name ===
+        "NotAllowedError"
+      ) {
 
-          return scanner.start(
-            camera.id,
-            {
-              fps: 10,
-              qrbox: {
-                width: 250,
-                height: 250
-              },
-              aspectRatio: 1.0
-            },
-            onSuccess,
-            onError
-          );
+        message =
+          "Akses kamera ditolak oleh browser. Sila benarkan Camera untuk laman GitHub Pages ini.";
 
-        })
-        .then(function() {
+      } else if (
+        error &&
+        error.name ===
+        "NotFoundError"
+      ) {
 
-          scannerRunning = true;
-          processingScan = false;
+        message =
+          "Tiada kamera ditemui pada peranti.";
 
-          status.innerText =
-            "Kamera sedia. Sila imbas QR.";
+      } else if (
+        error &&
+        error.name ===
+        "NotReadableError"
+      ) {
 
-        })
-        .catch(function(error) {
+        message =
+          "Kamera sedang digunakan oleh aplikasi lain.";
 
-          console.error(
-            "Semua kaedah kamera gagal:",
-            error
-          );
+      } else if (
+        error &&
+        error.message
+      ) {
 
-          scannerRunning = false;
-          processingScan = false;
+        message =
+          "Kamera tidak dapat dibuka: " +
+          error.message;
 
-          try {
-            scanner.clear();
-          } catch(clearError) {}
+      }
 
-          const message =
-            error &&
-            error.message
-              ? error.message
-              : "Akses kamera ditolak atau kamera tidak ditemui.";
-
-          status.innerText =
-            "Kamera tidak dapat dibuka: " +
-            message;
-
-        });
+      status.innerText =
+        message;
 
     });
 
 }
-
 
 
 function processScan(
