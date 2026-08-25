@@ -4618,9 +4618,22 @@ function callSATS(
   let finished = false;
 
   const script =
-    document.createElement(
-      "script"
-    );
+    document.createElement("script");
+
+  const separator =
+    url.indexOf("?") >= 0
+      ? "&"
+      : "?";
+
+  const finalUrl =
+    url +
+    separator +
+    "callback=" +
+    encodeURIComponent(
+      callbackName
+    ) +
+    "&_=" +
+    Date.now();
 
   const cleanup =
     function() {
@@ -4640,7 +4653,9 @@ function callSATS(
   const finish =
     function(data) {
 
-      if (finished) return;
+      if (finished) {
+        return;
+      }
 
       finished = true;
 
@@ -4650,9 +4665,9 @@ function callSATS(
 
       cleanup();
 
-      callback(
-        data
-      );
+      if (typeof callback === "function") {
+        callback(data);
+      }
 
     };
 
@@ -4662,13 +4677,13 @@ function callSATS(
     };
 
   script.src =
-    url +
-    (url.indexOf("?") >= 0 ? "&" : "?") +
-    "callback=" +
-    callbackName;
+    finalUrl;
 
   script.async =
     true;
+
+  script.referrerPolicy =
+    "no-referrer-when-downgrade";
 
   script.onerror =
     function() {
@@ -4696,7 +4711,7 @@ function callSATS(
             );
 
           },
-          500 * (attempt + 1)
+          700 * (attempt + 1)
         );
 
         return;
@@ -4707,11 +4722,13 @@ function callSATS(
 
         success: false,
 
-        type:
-          "connection",
+        type: "connection",
 
         message:
-          "Ralat sambungan ke SATS. Sila semak internet dan cuba lagi."
+          "Tidak dapat memuat respons SATS.",
+
+        debugUrl:
+          finalUrl
 
       });
 
@@ -4725,7 +4742,9 @@ function callSATS(
     setTimeout(
       function() {
 
-        if (finished) return;
+        if (finished) {
+          return;
+        }
 
         if (attempt < 2) {
 
@@ -4743,7 +4762,7 @@ function callSATS(
               );
 
             },
-            500 * (attempt + 1)
+            700 * (attempt + 1)
           );
 
           return;
@@ -4754,31 +4773,22 @@ function callSATS(
 
           success: false,
 
-          type:
-            "connection",
+          type: "timeout",
 
           message:
-            "SATS mengambil masa terlalu lama untuk memberi respons."
+            "SATS tidak memberi respons dalam 20 saat.",
+
+          debugUrl:
+            finalUrl
 
         });
 
       },
-      12000
+      20000
     );
 
 }
 
-
-
-/* =================================================
-   SATS MOBILE CONNECTION / DATA MANAGER
-   ================================================= */
-
-let satsConnected = false;
-let satsBooting = false;
-let satsSchoolSettings = null;
-let satsClassesReady = false;
-let satsStudentsReady = false;
 
 
 function setSATSConnectionStatus(
@@ -5096,11 +5106,16 @@ function showStudentsLoadingState() {
 
 }
 
-function ensureStudentsLoaded(done) {
+function ensureStudentsLoaded(
+  done
+) {
 
+  /*
+   * Memory cache.
+   */
   if (
-    satsStudentsReady &&
-    Array.isArray(allStudents)
+    Array.isArray(allStudents) &&
+    allStudents.length
   ) {
 
     if (typeof done === "function") {
@@ -5108,119 +5123,133 @@ function ensureStudentsLoaded(done) {
     }
 
     return;
+
   }
 
+  /*
+   * Browser cache.
+   */
+  const cache =
+    readStudentCache();
+
+  if (
+    cache &&
+    Array.isArray(cache.students) &&
+    cache.students.length
+  ) {
+
+    applyStudentData(
+      cache.students
+    );
+
+    if (typeof done === "function") {
+      done(allStudents);
+    }
+
+    /*
+     * Refresh silently.
+     */
+    refreshStudentsInBackground();
+
+    return;
+
+  }
+
+  /*
+   * Prevent multiple simultaneous API calls.
+   */
   if (window.satsStudentsLoading) {
 
     window.satsStudentsWaiters =
       window.satsStudentsWaiters || [];
 
     if (typeof done === "function") {
-      window.satsStudentsWaiters.push(done);
+      window.satsStudentsWaiters.push(
+        done
+      );
     }
 
     return;
+
   }
 
-  window.satsStudentsLoading = true;
-  window.satsStudentsWaiters = [];
+  window.satsStudentsLoading =
+    true;
+
+  window.satsStudentsWaiters =
+    [];
 
   if (typeof done === "function") {
-    window.satsStudentsWaiters.push(done);
+    window.satsStudentsWaiters.push(
+      done
+    );
   }
 
   callSATS(
-    SATS_API + "?action=getStudents",
+    SATS_API +
+    "?action=getStudents",
+
     function(data) {
 
-      window.satsStudentsLoading = false;
+      window.satsStudentsLoading =
+        false;
 
       if (
         data &&
-        data.success &&
-        Array.isArray(data.students)
+        data.success === true &&
+        Array.isArray(data.students) &&
+        data.students.length
       ) {
 
-        allStudents =
-          data.students.map(function(student) {
+        applyStudentData(
+          data.students
+        );
 
-            return {
-              id:
-                String(student.id || "").trim(),
-
-              name:
-                String(student.name || "").trim(),
-
-              className:
-                String(student.className || "").trim(),
-
-              rmt:
-                String(student.rmt || "").trim(),
-
-              qr:
-                String(student.qr || "").trim(),
-
-              profile:
-                String(student.profile || "").trim(),
-
-              file:
-                String(student.file || "").trim()
-            };
-
-          });
-
-        allClasses =
-          Array.from(
-            new Set(
-              allStudents
-                .map(function(student) {
-                  return student.className;
-                })
-                .filter(Boolean)
-            )
-          ).sort(function(a, b) {
-            return a.localeCompare(
-              b,
-              undefined,
-              {numeric: true}
-            );
-          });
-
-        satsStudentsReady = true;
+        writeStudentCache(
+          allStudents
+        );
 
       } else {
 
-        satsStudentsReady = false;
+        satsStudentsReady =
+          false;
 
       }
 
       const waiters =
-        window.satsStudentsWaiters || [];
+        window.satsStudentsWaiters ||
+        [];
 
-      window.satsStudentsWaiters = [];
+      window.satsStudentsWaiters =
+        [];
 
-      waiters.forEach(function(waiter) {
+      waiters.forEach(
+        function(waiter) {
 
-        try {
-          waiter(
-            satsStudentsReady
-              ? allStudents
-              : []
-          );
-        } catch(error) {
-          console.warn(
-            "Student waiter error:",
-            error
-          );
+          try {
+
+            waiter(
+              satsStudentsReady
+                ? allStudents
+                : []
+            );
+
+          } catch(error) {
+
+            console.warn(
+              "Student waiter error:",
+              error
+            );
+
+          }
+
         }
-
-      });
+      );
 
     }
   );
 
 }
-
 
 
 function populateAllClassSelectors() {
@@ -6040,112 +6069,388 @@ function saveManualAttendance() {
 }
 
 
+
+/* =====================================================
+   STUDENT CACHE
+   ===================================================== */
+
+const SATS_STUDENT_CACHE_KEY =
+  "SATS_STUDENTS_CACHE_V1";
+
+const SATS_STUDENT_CACHE_MAX_AGE =
+  60 * 60 * 1000; // 1 jam
+
+
+function readStudentCache() {
+
+  try {
+
+    const raw =
+      localStorage.getItem(
+        SATS_STUDENT_CACHE_KEY
+      );
+
+    if (!raw) {
+      return null;
+    }
+
+    const cache =
+      JSON.parse(raw);
+
+    if (
+      !cache ||
+      !Array.isArray(cache.students)
+    ) {
+      return null;
+    }
+
+    return cache;
+
+  } catch(error) {
+
+    console.warn(
+      "Student cache read error:",
+      error
+    );
+
+    return null;
+
+  }
+
+}
+
+
+function writeStudentCache(
+  students
+) {
+
+  try {
+
+    localStorage.setItem(
+      SATS_STUDENT_CACHE_KEY,
+      JSON.stringify({
+        timestamp:
+          Date.now(),
+
+        students:
+          students
+      })
+    );
+
+  } catch(error) {
+
+    console.warn(
+      "Student cache write error:",
+      error
+    );
+
+  }
+
+}
+
+
+function applyStudentData(
+  students
+) {
+
+  if (
+    !Array.isArray(students)
+  ) {
+    return false;
+  }
+
+  allStudents =
+    students.map(
+      function(student) {
+
+        return {
+
+          id:
+            String(
+              student.id || ""
+            ).trim(),
+
+          name:
+            String(
+              student.name || ""
+            ).trim(),
+
+          className:
+            String(
+              student.className || ""
+            ).trim(),
+
+          rmt:
+            String(
+              student.rmt || ""
+            ).trim(),
+
+          qr:
+            String(
+              student.qr || ""
+            ).trim(),
+
+          profile:
+            String(
+              student.profile || ""
+            ).trim(),
+
+          file:
+            String(
+              student.file || ""
+            ).trim()
+
+        };
+
+      }
+    );
+
+  allClasses =
+    Array.from(
+      new Set(
+        allStudents
+          .map(function(student) {
+            return student.className;
+          })
+          .filter(Boolean)
+      )
+    ).sort(function(a, b) {
+
+      return a.localeCompare(
+        b,
+        undefined,
+        {
+          numeric: true,
+          sensitivity: "base"
+        }
+      );
+
+    });
+
+  satsStudentsReady =
+    allStudents.length > 0;
+
+  return satsStudentsReady;
+
+}
+
+
+function renderStudentCache() {
+
+  if (
+    !Array.isArray(allStudents) ||
+    !allStudents.length
+  ) {
+    return false;
+  }
+
+  populateClassDropdowns();
+
+  if (
+    typeof populateAllClassSelectors ===
+    "function"
+  ) {
+    populateAllClassSelectors();
+  }
+
+  renderStudents(
+    allStudents
+  );
+
+  updatePrintButton(
+    allStudents.length
+  );
+
+  return true;
+
+}
+
+
+function refreshStudentsInBackground() {
+
+  callSATS(
+    SATS_API +
+    "?action=getStudents",
+
+    function(data) {
+
+      if (
+        !data ||
+        data.success !== true ||
+        !Array.isArray(data.students) ||
+        !data.students.length
+      ) {
+
+        console.warn(
+          "Background student refresh gagal:",
+          data
+        );
+
+        return;
+
+      }
+
+      applyStudentData(
+        data.students
+      );
+
+      writeStudentCache(
+        allStudents
+      );
+
+      console.log(
+        "Student cache dikemaskini:",
+        allStudents.length,
+        "murid"
+      );
+
+    }
+
+  );
+
+}
+
+
+
+function clearStudentCache() {
+
+  try {
+
+    localStorage.removeItem(
+      SATS_STUDENT_CACHE_KEY
+    );
+
+  } catch(error) {}
+
+  allStudents = [];
+  allClasses = [];
+  satsStudentsReady = false;
+
+}
+
+
 function loadStudents() {
 
   const container =
-    document.getElementById("studentList");
+    document.getElementById(
+      "studentList"
+    );
 
   if (!container) {
     return;
   }
 
+  /*
+   * STEP 1:
+   * If memory already has students,
+   * render immediately.
+   */
+  if (
+    Array.isArray(allStudents) &&
+    allStudents.length
+  ) {
+
+    renderStudentCache();
+
+    /*
+     * Still refresh silently in the background.
+     */
+    refreshStudentsInBackground();
+
+    return;
+  }
+
+  /*
+   * STEP 2:
+   * Try browser cache.
+   */
+  const cache =
+    readStudentCache();
+
+  if (
+    cache &&
+    Array.isArray(cache.students) &&
+    cache.students.length
+  ) {
+
+    applyStudentData(
+      cache.students
+    );
+
+    renderStudentCache();
+
+    /*
+     * User sees cached data immediately.
+     * SATS is refreshed silently afterwards.
+     */
+    refreshStudentsInBackground();
+
+    return;
+  }
+
+  /*
+   * STEP 3:
+   * No cache yet.
+   * First load from Apps Script.
+   */
   container.innerHTML =
-    "<div class='loading'>⏳ Memuatkan data murid...</div>";
+    "<div class='loading'>" +
+    "⏳ Memuatkan data murid daripada SATS..." +
+    "</div>";
 
   callSATS(
-    SATS_API + "?action=getStudents",
+    SATS_API +
+    "?action=getStudents",
+
     function(data) {
+
+      console.log(
+        "Initial getStudents response:",
+        data
+      );
 
       if (
         !data ||
-        !data.success ||
+        data.success !== true ||
         !Array.isArray(data.students)
       ) {
 
         container.innerHTML =
           "<div class='card error'>" +
+          "<strong>Data murid gagal dimuatkan.</strong>" +
+          "<br><br>" +
           escapeHtml(
-            (data && data.message) ||
-            "Tiada data murid diterima melalui SATS."
+            (
+              data &&
+              data.message
+            ) ||
+            "Respons SATS tidak mengandungi senarai murid."
           ) +
           "</div>";
 
-        satsStudentsReady = false;
+        satsStudentsReady =
+          false;
+
         return;
       }
 
-      allStudents =
-        data.students.map(function(student) {
+      applyStudentData(
+        data.students
+      );
 
-          return {
-            id:
-              String(student.id || "").trim(),
-
-            name:
-              String(student.name || "").trim(),
-
-            className:
-              String(student.className || "").trim(),
-
-            rmt:
-              String(student.rmt || "").trim(),
-
-            qr:
-              String(student.qr || "").trim(),
-
-            profile:
-              String(student.profile || "").trim(),
-
-            file:
-              String(student.file || "").trim()
-          };
-
-        });
-
-      allClasses =
-        Array.from(
-          new Set(
-            allStudents
-              .map(function(student) {
-                return student.className;
-              })
-              .filter(Boolean)
-          )
-        ).sort(function(a, b) {
-          return a.localeCompare(
-            b,
-            undefined,
-            {numeric: true}
-          );
-        });
-
-      satsStudentsReady = true;
-      window.satsStudentsLoading = false;
-
-      selectedStudentIds.clear();
-
-      populateClassDropdowns();
-
-      if (
-        typeof populateAllClassSelectors ===
-        "function"
-      ) {
-        populateAllClassSelectors();
-      }
-
-      renderStudents(
+      /*
+       * Save the successful first load.
+       */
+      writeStudentCache(
         allStudents
       );
 
-      updatePrintButton(
-        allStudents.length
-      );
+      renderStudentCache();
 
     }
   );
 
 }
-
 
 
 function populateClassDropdowns() {
