@@ -2862,7 +2862,6 @@ function showPage(pageName) {
 
     stopScanner();
 
-    loadClasses();
     loadStudents();
 
   }
@@ -5097,134 +5096,131 @@ function showStudentsLoadingState() {
 
 }
 
-function ensureStudentsLoaded(
-  done
-) {
+function ensureStudentsLoaded(done) {
 
   if (
     satsStudentsReady &&
     Array.isArray(allStudents)
   ) {
 
-    if (
-      typeof done ===
-      "function"
-    ) {
-      done(
-        allStudents
-      );
+    if (typeof done === "function") {
+      done(allStudents);
     }
 
     return;
   }
 
-
-  // Prevent duplicate student requests.
-  if (
-    window.satsStudentsLoading
-  ) {
+  if (window.satsStudentsLoading) {
 
     window.satsStudentsWaiters =
-      window.satsStudentsWaiters ||
-      [];
+      window.satsStudentsWaiters || [];
 
-    if (
-      typeof done ===
-      "function"
-    ) {
-      window.satsStudentsWaiters.push(
-        done
-      );
+    if (typeof done === "function") {
+      window.satsStudentsWaiters.push(done);
     }
 
     return;
-
   }
 
+  window.satsStudentsLoading = true;
+  window.satsStudentsWaiters = [];
 
-  window.satsStudentsLoading =
-    true;
-
-  showStudentsLoadingState();
-
-  window.satsStudentsWaiters =
-    [];
-
-  if (
-    typeof done ===
-    "function"
-  ) {
-    window.satsStudentsWaiters.push(
-      done
-    );
+  if (typeof done === "function") {
+    window.satsStudentsWaiters.push(done);
   }
-
 
   callSATS(
-    SATS_API +
-    "?action=getStudents",
+    SATS_API + "?action=getStudents",
     function(data) {
 
-      window.satsStudentsLoading =
-        false;
+      window.satsStudentsLoading = false;
 
       if (
         data &&
-        data.success
+        data.success &&
+        Array.isArray(data.students)
       ) {
 
         allStudents =
-          Array.isArray(
-            data.students
-          )
-            ? data.students
-            : [];
+          data.students.map(function(student) {
 
-        satsStudentsReady =
-          true;
+            return {
+              id:
+                String(student.id || "").trim(),
 
-        renderStudentDataFromCache();
+              name:
+                String(student.name || "").trim(),
+
+              className:
+                String(student.className || "").trim(),
+
+              rmt:
+                String(student.rmt || "").trim(),
+
+              qr:
+                String(student.qr || "").trim(),
+
+              profile:
+                String(student.profile || "").trim(),
+
+              file:
+                String(student.file || "").trim()
+            };
+
+          });
+
+        allClasses =
+          Array.from(
+            new Set(
+              allStudents
+                .map(function(student) {
+                  return student.className;
+                })
+                .filter(Boolean)
+            )
+          ).sort(function(a, b) {
+            return a.localeCompare(
+              b,
+              undefined,
+              {numeric: true}
+            );
+          });
+
+        satsStudentsReady = true;
+
+      } else {
+
+        satsStudentsReady = false;
 
       }
 
-
       const waiters =
-        window.satsStudentsWaiters ||
-        [];
+        window.satsStudentsWaiters || [];
 
-      window.satsStudentsWaiters =
-        [];
+      window.satsStudentsWaiters = [];
 
+      waiters.forEach(function(waiter) {
 
-      waiters.forEach(
-        function(waiter) {
-
-          try {
-
-            waiter(
-              satsStudentsReady
-                ? allStudents
-                : []
-            );
-
-          }
-
-          catch(error) {
-
-            console.warn(
-              "Student waiter error:",
-              error
-            );
-
-          }
-
+        try {
+          waiter(
+            satsStudentsReady
+              ? allStudents
+              : []
+          );
+        } catch(error) {
+          console.warn(
+            "Student waiter error:",
+            error
+          );
         }
-      );
+
+      });
 
     }
   );
 
 }
+
 
 
 function populateAllClassSelectors() {
@@ -5630,23 +5626,40 @@ function prepareManualAttendancePage() {
       getTodayDateInput();
   }
 
-  if (!allClasses.length) {
+  ensureStudentsLoaded(
+    function(students) {
 
-    populateManualClasses();
+      allStudents =
+        Array.isArray(students)
+          ? students
+          : [];
 
-    loadClasses(
-      function() {
-        populateManualClasses();
-      }
-    );
+      allClasses =
+        Array.from(
+          new Set(
+            allStudents
+              .map(function(student) {
+                return String(
+                  student.className || ""
+                ).trim();
+              })
+              .filter(Boolean)
+          )
+        ).sort(function(a, b) {
+          return a.localeCompare(
+            b,
+            undefined,
+            {numeric: true}
+          );
+        });
 
-    return;
+      populateManualClasses();
 
-  }
-
-  populateManualClasses();
+    }
+  );
 
 }
+
 
 
 function populateManualClasses() {
@@ -6036,87 +6049,65 @@ function loadStudents() {
     return;
   }
 
-  /*
-   * IMPORTANT:
-   * Data Murid is read-only and comes from IMPORTRANGE.
-   *
-   * Use the same single student cache used by the rest
-   * of the SATS frontend. This prevents multiple
-   * getStudents requests and keeps class/student data
-   * consistent across Data Murid and Manual.
-   */
-
-  if (
-    typeof satsStudentsReady !== "undefined" &&
-    satsStudentsReady &&
-    Array.isArray(allStudents) &&
-    allStudents.length
-  ) {
-
-    allClasses =
-      Array.from(
-        new Set(
-          allStudents
-            .map(function(student) {
-              return String(
-                student.className || ""
-              ).trim();
-            })
-            .filter(Boolean)
-        )
-      ).sort(function(a, b) {
-        return a.localeCompare(
-          b,
-          undefined,
-          {numeric: true}
-        );
-      });
-
-    populateClassDropdowns();
-
-    renderStudents(
-      allStudents
-    );
-
-    updatePrintButton(
-      allStudents.length
-    );
-
-    return;
-  }
-
   container.innerHTML =
-    "<div class='loading'>" +
-    "⏳ Memuatkan data murid..." +
-    "</div>";
+    "<div class='loading'>⏳ Memuatkan data murid...</div>";
 
-  ensureStudentsLoaded(
-    function(students) {
+  callSATS(
+    SATS_API + "?action=getStudents",
+    function(data) {
 
       if (
-        !Array.isArray(students) ||
-        !students.length
+        !data ||
+        !data.success ||
+        !Array.isArray(data.students)
       ) {
 
         container.innerHTML =
           "<div class='card error'>" +
-          "Tiada data murid diterima daripada SATS." +
+          escapeHtml(
+            (data && data.message) ||
+            "Tiada data murid diterima melalui SATS."
+          ) +
           "</div>";
 
+        satsStudentsReady = false;
         return;
       }
 
       allStudents =
-        students;
+        data.students.map(function(student) {
+
+          return {
+            id:
+              String(student.id || "").trim(),
+
+            name:
+              String(student.name || "").trim(),
+
+            className:
+              String(student.className || "").trim(),
+
+            rmt:
+              String(student.rmt || "").trim(),
+
+            qr:
+              String(student.qr || "").trim(),
+
+            profile:
+              String(student.profile || "").trim(),
+
+            file:
+              String(student.file || "").trim()
+          };
+
+        });
 
       allClasses =
         Array.from(
           new Set(
             allStudents
               .map(function(student) {
-                return String(
-                  student.className || ""
-                ).trim();
+                return student.className;
               })
               .filter(Boolean)
           )
@@ -6128,7 +6119,19 @@ function loadStudents() {
           );
         });
 
+      satsStudentsReady = true;
+      window.satsStudentsLoading = false;
+
+      selectedStudentIds.clear();
+
       populateClassDropdowns();
+
+      if (
+        typeof populateAllClassSelectors ===
+        "function"
+      ) {
+        populateAllClassSelectors();
+      }
 
       renderStudents(
         allStudents
@@ -6142,6 +6145,7 @@ function loadStudents() {
   );
 
 }
+
 
 
 function populateClassDropdowns() {
@@ -7994,161 +7998,212 @@ function switchScannerCamera(
 
 function startScanner() {
 
-  setScannerCameraControl(
-    scannerFacingMode
-  );
+  const reader =
+    document.getElementById("reader");
 
+  const status =
+    document.getElementById("scannerStatus");
 
-  if (
-    scannerRunning
-  ) {
-
+  if (!reader || !status) {
     return;
-
   }
 
+  if (scannerRunning) {
+    return;
+  }
 
-  processingScan =
-    false;
+  if (
+    typeof Html5Qrcode ===
+    "undefined"
+  ) {
 
+    status.innerText =
+      "Scanner QR belum dimuatkan. Sila refresh halaman.";
 
-  document
-    .getElementById(
-      "scannerStatus"
-    )
-    .innerText =
+    return;
+  }
+
+  processingScan = false;
+
+  status.innerText =
     "Membuka kamera...";
-
 
   try {
 
+    if (scanner) {
+      try {
+        scanner.clear();
+      } catch(error) {}
+    }
+
     scanner =
-      new Html5Qrcode(
-        "reader"
-      );
+      new Html5Qrcode("reader");
 
-  }
+  } catch(error) {
 
-  catch(error) {
+    console.error(
+      "Gagal mencipta scanner:",
+      error
+    );
 
-    console.error(error);
+    status.innerText =
+      "Scanner QR tidak dapat dimulakan.";
 
     return;
+  }
+
+  function onSuccess(decodedText) {
+
+    if (processingScan) {
+      return;
+    }
+
+    processingScan = true;
+
+    try {
+      scanner.pause(true);
+    } catch(error) {}
+
+    processScan(
+      decodedText
+    );
 
   }
 
+  function onError(errorMessage) {
+    /* Frame decode failures are normal. */
+  }
 
-  scanner.start(
+  /*
+   * First try the browser's environment camera.
+   * If that fails, enumerate cameras and try the
+   * first available camera.
+   */
+  scanner
+    .start(
+      {
+        facingMode:
+          scannerFacingMode || "environment"
+      },
+      {
+        fps: 10,
+        qrbox: {
+          width: 250,
+          height: 250
+        },
+        aspectRatio: 1.0
+      },
+      onSuccess,
+      onError
+    )
+    .then(function() {
 
-    {
-      facingMode:
-        scannerFacingMode
-    },
+      scannerRunning = true;
+      processingScan = false;
 
-    {
-
-      fps: 10,
-
-      qrbox: {
-
-        width: 250,
-
-        height: 250
-
-      }
-
-    },
-
-    function(decodedText) {
-
-
-      if (
-        processingScan
-      ) {
-
-        return;
-
-      }
-
-
-      processingScan =
-        true;
-
-
-      try {
-
-        scanner.pause(
-          true
-        );
-
-      }
-
-      catch(error) {}
-
-
-      processScan(
-        decodedText
-      );
-
-    },
-
-    function(errorMessage) {
-
-      // Normal QR scanner errors
-      // are intentionally ignored.
-
-    }
-
-  )
-
-  .then(
-    function() {
-
-      scannerRunning =
-        true;
-
-      processingScan =
-        false;
-
-
-      document
-        .getElementById(
-          "scannerStatus"
-        )
-        .innerText =
+      status.innerText =
         "Kamera sedia. Sila imbas QR.";
 
-    }
-  )
+    })
+    .catch(function(firstError) {
 
-  .catch(
-    function(error) {
-
-      console.error(
-        error
+      console.warn(
+        "Kamera facingMode gagal:",
+        firstError
       );
 
+      Html5Qrcode
+        .getCameras()
+        .then(function(cameras) {
 
-      scannerRunning =
-        false;
+          if (
+            !Array.isArray(cameras) ||
+            !cameras.length
+          ) {
+            throw new Error(
+              "Tiada kamera ditemui."
+            );
+          }
 
+          let camera =
+            cameras[0];
 
-      document
-        .getElementById(
-          "scannerStatus"
-        )
-        .innerText =
-        "Kamera tidak dapat dibuka. Sila benarkan akses kamera.";
+          if (
+            scannerFacingMode ===
+            "environment"
+          ) {
 
-    }
-  );
+            const back =
+              cameras.find(
+                function(item) {
+                  return /back|rear|environment/i
+                    .test(
+                      item.label || ""
+                    );
+                }
+              );
+
+            if (back) {
+              camera = back;
+            }
+
+          }
+
+          return scanner.start(
+            camera.id,
+            {
+              fps: 10,
+              qrbox: {
+                width: 250,
+                height: 250
+              },
+              aspectRatio: 1.0
+            },
+            onSuccess,
+            onError
+          );
+
+        })
+        .then(function() {
+
+          scannerRunning = true;
+          processingScan = false;
+
+          status.innerText =
+            "Kamera sedia. Sila imbas QR.";
+
+        })
+        .catch(function(error) {
+
+          console.error(
+            "Semua kaedah kamera gagal:",
+            error
+          );
+
+          scannerRunning = false;
+          processingScan = false;
+
+          try {
+            scanner.clear();
+          } catch(clearError) {}
+
+          const message =
+            error &&
+            error.message
+              ? error.message
+              : "Akses kamera ditolak atau kamera tidak ditemui.";
+
+          status.innerText =
+            "Kamera tidak dapat dibuka: " +
+            message;
+
+        });
+
+    });
 
 }
 
 
-/* =================================================
-   PROCESS QR SCAN
-   ================================================= */
 
 function processScan(
   qrCode
@@ -8669,6 +8724,10 @@ function stopScanner() {
 
   processingScan =
     false;
+
+
+  scannerRunning = false;
+  processingScan = false;
 
 }
 
