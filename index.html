@@ -4615,176 +4615,96 @@ function deleteSchoolCalendarEntry(rowNumber) {
    JSONP HELPER
    ================================================= */
 
-function callSATS(
-  url,
-  callback,
-  attempt
-) {
+function callSATS(url, callback, attempt) {
 
-  attempt =
-    Number(attempt || 0);
+  attempt = Number(attempt || 0);
 
+  const maxAttempts = 2;
   const callbackName =
     "satsCallback_" +
-    Date.now() +
-    "_" +
-    Math.floor(
-      Math.random() * 1000000
-    );
+    Date.now() + "_" +
+    Math.floor(Math.random() * 1000000);
 
   let finished = false;
+  let timeoutId = null;
 
-  const script =
-    document.createElement(
-      "script"
-    );
+  const script = document.createElement("script");
+  script.async = true;
 
-  const cleanup =
-    function() {
+  function cleanup() {
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
+    }
 
-      if (script.parentNode) {
-        script.parentNode.removeChild(
-          script
-        );
-      }
+    try {
+      delete window[callbackName];
+    } catch (error) {}
+  }
 
-      try {
-        delete window[callbackName];
-      } catch(error) {}
+  function retryOrFail(message, type) {
+    if (finished) return;
 
-    };
-
-  const finish =
-    function(data) {
-
-      if (finished) return;
-
+    if (attempt < maxAttempts) {
       finished = true;
-
-      clearTimeout(
-        timeoutId
-      );
-
+      if (timeoutId) clearTimeout(timeoutId);
       cleanup();
 
-      callback(
-        data
-      );
+      setTimeout(function() {
+        callSATS(url, callback, attempt + 1);
+      }, 600 * (attempt + 1));
+      return;
+    }
 
-    };
+    finished = true;
+    if (timeoutId) clearTimeout(timeoutId);
+    cleanup();
 
-  window[callbackName] =
-    function(data) {
-      finish(data);
-    };
+    callback({
+      success: false,
+      type: type || "connection",
+      message: message || "SATS tidak memberi respons yang sah."
+    });
+  }
 
-  script.src =
+  function finish(data) {
+    if (finished) return;
+
+    finished = true;
+    if (timeoutId) clearTimeout(timeoutId);
+    cleanup();
+
+    callback(data);
+  }
+
+  window[callbackName] = function(data) {
+    finish(data);
+  };
+
+  const separator = url.indexOf("?") >= 0 ? "&" : "?";
+  const requestUrl =
     url +
-    (url.indexOf("?") >= 0 ? "&" : "?") +
-    "callback=" +
-    callbackName;
+    separator +
+    "callback=" + encodeURIComponent(callbackName) +
+    "&_=" + Date.now();
 
-  script.async =
-    true;
+  script.src = requestUrl;
 
-  script.onerror =
-    function() {
-
-      if (
-        !finished &&
-        attempt < 2
-      ) {
-
-        finished = true;
-
-        clearTimeout(
-          timeoutId
-        );
-
-        cleanup();
-
-        setTimeout(
-          function() {
-
-            callSATS(
-              url,
-              callback,
-              attempt + 1
-            );
-
-          },
-          500 * (attempt + 1)
-        );
-
-        return;
-
-      }
-
-      finish({
-
-        success: false,
-
-        type:
-          "connection",
-
-        message:
-          "Ralat sambungan ke SATS. Sila semak internet dan cuba lagi."
-
-      });
-
-    };
-
-  document.body.appendChild(
-    script
-  );
-
-  const timeoutId =
-    setTimeout(
-      function() {
-
-        if (finished) return;
-
-        if (attempt < 2) {
-
-          finished = true;
-
-          cleanup();
-
-          setTimeout(
-            function() {
-
-              callSATS(
-                url,
-                callback,
-                attempt + 1
-              );
-
-            },
-            500 * (attempt + 1)
-          );
-
-          return;
-
-        }
-
-        finish({
-
-          success: false,
-
-          type:
-            "connection",
-
-          message:
-            "SATS mengambil masa terlalu lama untuk memberi respons."
-
-        });
-
-      },
-      12000
+  script.onerror = function() {
+    retryOrFail(
+      "SATS gagal memuatkan respons. Sila semak URL Web App dan deployment Apps Script.",
+      "connection"
     );
+  };
 
+  document.body.appendChild(script);
+
+  timeoutId = setTimeout(function() {
+    retryOrFail(
+      "SATS mengambil masa terlalu lama untuk memberi respons.",
+      "timeout"
+    );
+  }, 15000);
 }
-
 
 
 /* =================================================
