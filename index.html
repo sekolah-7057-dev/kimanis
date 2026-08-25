@@ -7641,34 +7641,141 @@ function populateRiskClasses(classes) {
 }
 
 function loadAtRiskStudents() {
+
   setRiskDefaultDates();
-  const start=document.getElementById("riskStartDate").value;
-  const end=document.getElementById("riskEndDate").value;
-  const cls=document.getElementById("riskClass").value;
-  const threshold=document.getElementById("riskThreshold").value;
-  const body=document.getElementById("riskStudentsBody");
-  const summary=document.getElementById("riskSummary");
 
-  if(!start || !end) { alert("Sila pilih tarikh mula dan tarikh akhir."); return; }
-  if(start>end) { alert("Tarikh mula tidak boleh melebihi tarikh akhir."); return; }
+  const start =
+    document.getElementById(
+      "riskStartDate"
+    ).value;
 
-  body.innerHTML='<tr><td colspan="9" style="padding:15px;text-align:center;">Menyemak...</td></tr>';
+  const end =
+    document.getElementById(
+      "riskEndDate"
+    ).value;
 
-  callSATS(SATS_API+"?action=getAtRiskStudents"+
-    "&startDate="+encodeURIComponent(start)+
-    "&endDate="+encodeURIComponent(end)+
-    "&className="+encodeURIComponent(cls)+
-    "&threshold="+encodeURIComponent(threshold), function(data) {
+  const cls =
+    document.getElementById(
+      "riskClass"
+    ).value;
 
-      if(!data || !data.success) {
-        body.innerHTML='<tr><td colspan="9" style="padding:15px;text-align:center;color:#991b1b;">'+
-          escapeHtml((data&&data.message)||"Gagal mendapatkan senarai.")+"</td></tr>";
-        return;
-      }
-      populateRiskClasses(data.allClasses||[]);
-      renderAtRiskStudents(data);
-    });
+  const threshold =
+    document.getElementById(
+      "riskThreshold"
+    ).value;
+
+  const body =
+    document.getElementById(
+      "riskStudentsBody"
+    );
+
+  const summary =
+    document.getElementById(
+      "riskSummary"
+    );
+
+  if (!start || !end) {
+    alert(
+      "Sila pilih tarikh mula dan tarikh akhir."
+    );
+    return;
+  }
+
+  if (start > end) {
+    alert(
+      "Tarikh mula tidak boleh melebihi tarikh akhir."
+    );
+    return;
+  }
+
+  body.innerHTML =
+    '<tr><td colspan="9" style="padding:15px;text-align:center;">Menyemak...</td></tr>';
+
+  /*
+   * Populate risk class dropdown from Data Murid.
+   */
+  loadStudentsDirectFromSheet(
+    function(students) {
+
+      const sheetClasses =
+        Array.from(
+          new Set(
+            (Array.isArray(students)
+              ? students
+              : []
+            )
+              .map(
+                function(student) {
+                  return String(
+                    student.className || ""
+                  ).trim();
+                }
+              )
+              .filter(Boolean)
+          )
+        ).sort(
+          function(a,b) {
+            return a.localeCompare(
+              b,
+              undefined,
+              {
+                numeric: true,
+                sensitivity: "base"
+              }
+            );
+          }
+        );
+
+      populateRiskClasses(
+        sheetClasses
+      );
+
+      callSATS(
+        SATS_API +
+        "?action=getAtRiskStudents" +
+        "&startDate=" +
+        encodeURIComponent(start) +
+        "&endDate=" +
+        encodeURIComponent(end) +
+        "&className=" +
+        encodeURIComponent(cls) +
+        "&threshold=" +
+        encodeURIComponent(threshold),
+
+        function(data) {
+
+          if (
+            !data ||
+            !data.success
+          ) {
+
+            body.innerHTML =
+              '<tr><td colspan="9" style="padding:15px;text-align:center;color:#991b1b;">' +
+              escapeHtml(
+                (
+                  data &&
+                  data.message
+                ) ||
+                "Gagal mendapatkan senarai."
+              ) +
+              "</td></tr>";
+
+            return;
+          }
+
+          renderAtRiskStudents(
+            data
+          );
+
+        }
+      );
+
+    }
+  );
+
 }
+
+
 
 function renderAtRiskStudents(data) {
 
@@ -9297,7 +9404,7 @@ function loadDashboard() {
       ? dateInput.value
       : getDashboardTodayDate();
 
-  const className =
+  const selectedClass =
     classSelect
       ? classSelect.value
       : "";
@@ -9313,47 +9420,35 @@ function loadDashboard() {
 
   if (body) {
     body.innerHTML =
-      '<tr><td colspan="6" style="padding:15px;text-align:center;">Memuatkan dashboard...</td></tr>';
+      '<tr><td colspan="6" style="padding:15px;text-align:center;">Memuatkan data murid dan kehadiran...</td></tr>';
   }
 
-  callSATS(
-    SATS_API +
-    "?action=getDashboard" +
-    "&date=" +
-    encodeURIComponent(reportDate) +
-    "&className=" +
-    encodeURIComponent(className),
-
-    function(data) {
+  /*
+   * IMPORTANT:
+   * Student totals and class list now come directly
+   * from Google Sheet -> Data Murid.
+   *
+   * Apps Script is used only for attendance/calendar.
+   */
+  loadStudentsDirectFromSheet(
+    function(
+      students,
+      studentError
+    ) {
 
       if (
-        !data ||
-        !data.success
+        !Array.isArray(students) ||
+        !students.length
       ) {
-
-        document.getElementById(
-          "totalStudents"
-        ).innerText = "-";
-
-        document.getElementById(
-          "totalPresent"
-        ).innerText = "-";
-
-        document.getElementById(
-          "totalAbsent"
-        ).innerText = "-";
-
-        document.getElementById(
-          "attendancePercent"
-        ).innerText = "-";
 
         if (body) {
           body.innerHTML =
             '<tr><td colspan="6" style="padding:15px;text-align:center;color:#991b1b;">' +
             escapeHtml(
-              (data &&
-                data.message) ||
-              "Gagal mendapatkan dashboard."
+              studentError &&
+              studentError.message
+                ? studentError.message
+                : "Data Murid tidak dapat dibaca daripada Google Sheet."
             ) +
             "</td></tr>";
         }
@@ -9361,55 +9456,262 @@ function loadDashboard() {
         return;
       }
 
-      document.getElementById(
-        "totalStudents"
-      ).innerText =
-        Number(
-          data.totalStudents || 0
+      /*
+       * Classes are derived from Column C / className.
+       */
+      const sheetClasses =
+        Array.from(
+          new Set(
+            students
+              .map(
+                function(student) {
+                  return String(
+                    student.className || ""
+                  ).trim();
+                }
+              )
+              .filter(Boolean)
+          )
+        ).sort(
+          function(a, b) {
+            return a.localeCompare(
+              b,
+              undefined,
+              {
+                numeric: true,
+                sensitivity: "base"
+              }
+            );
+          }
         );
 
-      document.getElementById(
-        "totalPresent"
-      ).innerText =
-        Number(
-          data.present || 0
-        );
+      /*
+       * Count students from Data Murid itself.
+       */
+      const selectedStudents =
+        selectedClass
+          ? students.filter(
+              function(student) {
+                return (
+                  String(
+                    student.className || ""
+                  ).trim() ===
+                  selectedClass
+                );
+              }
+            )
+          : students;
 
-      document.getElementById(
-        "totalAbsent"
-      ).innerText =
-        Number(
-          data.absent || 0
-        );
-
-      document.getElementById(
-        "attendancePercent"
-      ).innerText =
-        Number(
-          data.percentage || 0
-        ) +
-        "%";
-
-      renderDashboardCalendarStatus(
-        data
-      );
-
-      renderDashboardClasses(
-        data.classes || []
-      );
+      const sheetStudentCount =
+        selectedStudents.length;
 
       populateDashboardClasses(
-        data.allClasses || []
+        sheetClasses
       );
 
-      populateRiskClasses(
-        data.allClasses || []
+      /*
+       * Then ask SATS only for attendance/calendar.
+       */
+      callSATS(
+        SATS_API +
+        "?action=getDashboard" +
+        "&date=" +
+        encodeURIComponent(
+          reportDate
+        ) +
+        "&className=" +
+        encodeURIComponent(
+          selectedClass
+        ),
+
+        function(data) {
+
+          if (
+            !data ||
+            !data.success
+          ) {
+
+            document.getElementById(
+              "totalStudents"
+            ).innerText =
+              sheetStudentCount;
+
+            document.getElementById(
+              "totalPresent"
+            ).innerText =
+              "-";
+
+            document.getElementById(
+              "totalAbsent"
+            ).innerText =
+              "-";
+
+            document.getElementById(
+              "attendancePercent"
+            ).innerText =
+              "-";
+
+            if (body) {
+              body.innerHTML =
+                '<tr><td colspan="6" style="padding:15px;text-align:center;color:#991b1b;">' +
+                "Data murid berjaya dimuatkan, tetapi data kehadiran SATS tidak dapat dimuatkan." +
+                "</td></tr>";
+            }
+
+            return;
+          }
+
+          /*
+           * TOTAL MURID ALWAYS comes from Data Murid.
+           */
+          document.getElementById(
+            "totalStudents"
+          ).innerText =
+            sheetStudentCount;
+
+          document.getElementById(
+            "totalPresent"
+          ).innerText =
+            Number(
+              data.present || 0
+            );
+
+          document.getElementById(
+            "totalAbsent"
+          ).innerText =
+            Number(
+              data.absent || 0
+            );
+
+          document.getElementById(
+            "attendancePercent"
+          ).innerText =
+            Number(
+              data.percentage || 0
+            ) +
+            "%";
+
+          renderDashboardCalendarStatus(
+            data
+          );
+
+          /*
+           * Merge attendance class results with
+           * Data Murid class list.
+           *
+           * This guarantees that a class is shown
+           * even when there is no attendance record
+           * yet for that date.
+           */
+          const attendanceClasses =
+            Array.isArray(
+              data.classes
+            )
+              ? data.classes
+              : [];
+
+          const attendanceMap = {};
+
+          attendanceClasses.forEach(
+            function(item) {
+
+              const key =
+                String(
+                  item.className || ""
+                ).trim();
+
+              if (key) {
+                attendanceMap[key] =
+                  item;
+              }
+
+            }
+          );
+
+          const mergedClasses =
+            (
+              selectedClass
+                ? [selectedClass]
+                : sheetClasses
+            ).map(
+              function(className) {
+
+                const attendance =
+                  attendanceMap[
+                    className
+                  ] || {};
+
+                const total =
+                  students.filter(
+                    function(student) {
+                      return (
+                        String(
+                          student.className || ""
+                        ).trim() ===
+                        className
+                      );
+                    }
+                  ).length;
+
+                const present =
+                  Number(
+                    attendance.present || 0
+                  );
+
+                const absent =
+                  Number(
+                    attendance.absent || 0
+                  );
+
+                const percentage =
+                  total > 0
+                    ? Math.round(
+                        (
+                          present /
+                          total
+                        ) *
+                        100
+                      )
+                    : 0;
+
+                return {
+
+                  className:
+                    className,
+
+                  totalStudents:
+                    total,
+
+                  present:
+                    present,
+
+                  absent:
+                    absent,
+
+                  percentage:
+                    percentage
+
+                };
+
+              }
+            );
+
+          renderDashboardClasses(
+            mergedClasses
+          );
+
+          populateRiskClasses(
+            sheetClasses
+          );
+
+        }
       );
 
     }
   );
 
 }
+
 
 
 function populateDashboardClasses(
