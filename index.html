@@ -5008,14 +5008,10 @@ function showStudentsLoadingState() {
 
 }
 
-function ensureStudentsLoaded(
-  done
-) {
+function ensureStudentsLoaded(done) {
 
-  /*
-   * Memory cache.
-   */
   if (
+    satsStudentsReady &&
     Array.isArray(allStudents) &&
     allStudents.length
   ) {
@@ -5025,54 +5021,18 @@ function ensureStudentsLoaded(
     }
 
     return;
-
   }
 
-  /*
-   * Browser cache.
-   */
-  const cache =
-    readStudentCache();
-
-  if (
-    cache &&
-    Array.isArray(cache.students) &&
-    cache.students.length
-  ) {
-
-    applyStudentData(
-      cache.students
-    );
-
-    if (typeof done === "function") {
-      done(allStudents);
-    }
-
-    /*
-     * Refresh silently.
-     */
-    refreshStudentsInBackground();
-
-    return;
-
-  }
-
-  /*
-   * Prevent multiple simultaneous API calls.
-   */
   if (window.satsStudentsLoading) {
 
     window.satsStudentsWaiters =
       window.satsStudentsWaiters || [];
 
     if (typeof done === "function") {
-      window.satsStudentsWaiters.push(
-        done
-      );
+      window.satsStudentsWaiters.push(done);
     }
 
     return;
-
   }
 
   window.satsStudentsLoading =
@@ -5082,9 +5042,7 @@ function ensureStudentsLoaded(
     [];
 
   if (typeof done === "function") {
-    window.satsStudentsWaiters.push(
-      done
-    );
+    window.satsStudentsWaiters.push(done);
   }
 
   callSATS(
@@ -5103,13 +5061,82 @@ function ensureStudentsLoaded(
         data.students.length
       ) {
 
-        applyStudentData(
-          data.students
-        );
+        allStudents =
+          data.students.map(
+            function(student) {
 
-        writeStudentCache(
-          allStudents
-        );
+              return {
+
+                id:
+                  String(
+                    student.id || ""
+                  ).trim(),
+
+                name:
+                  String(
+                    student.name || ""
+                  ).trim(),
+
+                className:
+                  String(
+                    student.className || ""
+                  ).trim(),
+
+                rmt:
+                  String(
+                    student.rmt || ""
+                  ).trim(),
+
+                qr:
+                  String(
+                    student.qr || ""
+                  ).trim(),
+
+                profile:
+                  String(
+                    student.profile || ""
+                  ).trim(),
+
+                file:
+                  String(
+                    student.file || ""
+                  ).trim()
+
+              };
+
+            }
+          );
+
+        allClasses =
+          Array.from(
+            new Set(
+              allStudents
+                .map(
+                  function(student) {
+                    return String(
+                      student.className || ""
+                    ).trim();
+                  }
+                )
+                .filter(Boolean)
+            )
+          ).sort(
+            function(a, b) {
+
+              return a.localeCompare(
+                b,
+                undefined,
+                {
+                  numeric: true,
+                  sensitivity: "base"
+                }
+              );
+
+            }
+          );
+
+        satsStudentsReady =
+          true;
 
       } else {
 
@@ -5119,8 +5146,7 @@ function ensureStudentsLoaded(
       }
 
       const waiters =
-        window.satsStudentsWaiters ||
-        [];
+        window.satsStudentsWaiters || [];
 
       window.satsStudentsWaiters =
         [];
@@ -5129,20 +5155,16 @@ function ensureStudentsLoaded(
         function(waiter) {
 
           try {
-
             waiter(
               satsStudentsReady
                 ? allStudents
                 : []
             );
-
           } catch(error) {
-
             console.warn(
               "Student waiter error:",
               error
             );
-
           }
 
         }
@@ -5152,6 +5174,7 @@ function ensureStudentsLoaded(
   );
 
 }
+
 
 
 function populateAllClassSelectors() {
@@ -6246,62 +6269,9 @@ function loadStudents() {
     return;
   }
 
-  /*
-   * STEP 1:
-   * If memory already has students,
-   * render immediately.
-   */
-  if (
-    Array.isArray(allStudents) &&
-    allStudents.length
-  ) {
-
-    renderStudentCache();
-
-    /*
-     * Still refresh silently in the background.
-     */
-    refreshStudentsInBackground();
-
-    return;
-  }
-
-  /*
-   * STEP 2:
-   * Try browser cache.
-   */
-  const cache =
-    readStudentCache();
-
-  if (
-    cache &&
-    Array.isArray(cache.students) &&
-    cache.students.length
-  ) {
-
-    applyStudentData(
-      cache.students
-    );
-
-    renderStudentCache();
-
-    /*
-     * User sees cached data immediately.
-     * SATS is refreshed silently afterwards.
-     */
-    refreshStudentsInBackground();
-
-    return;
-  }
-
-  /*
-   * STEP 3:
-   * No cache yet.
-   * First load from Apps Script.
-   */
   container.innerHTML =
     "<div class='loading'>" +
-    "⏳ Memuatkan data murid daripada SATS..." +
+    "⏳ Menyambung ke Data Murid..." +
     "</div>";
 
   callSATS(
@@ -6311,7 +6281,7 @@ function loadStudents() {
     function(data) {
 
       console.log(
-        "Initial getStudents response:",
+        "SATS getStudents:",
         data
       );
 
@@ -6323,40 +6293,127 @@ function loadStudents() {
 
         container.innerHTML =
           "<div class='card error'>" +
-          "<strong>Data murid gagal dimuatkan.</strong>" +
+          "<strong>Data Murid tidak dapat dimuatkan.</strong>" +
           "<br><br>" +
           escapeHtml(
             (
               data &&
               data.message
             ) ||
-            "Respons SATS tidak mengandungi senarai murid."
+            "Tiada data murid diterima daripada SATS."
           ) +
           "</div>";
 
-        satsStudentsReady =
-          false;
-
+        satsStudentsReady = false;
         return;
       }
 
-      applyStudentData(
-        data.students
-      );
+      allStudents =
+        data.students.map(
+          function(student) {
+
+            return {
+
+              id:
+                String(
+                  student.id || ""
+                ).trim(),
+
+              name:
+                String(
+                  student.name || ""
+                ).trim(),
+
+              className:
+                String(
+                  student.className || ""
+                ).trim(),
+
+              rmt:
+                String(
+                  student.rmt || ""
+                ).trim(),
+
+              qr:
+                String(
+                  student.qr || ""
+                ).trim(),
+
+              profile:
+                String(
+                  student.profile || ""
+                ).trim(),
+
+              file:
+                String(
+                  student.file || ""
+                ).trim()
+
+            };
+
+          }
+        );
 
       /*
-       * Save the successful first load.
+       * CLASS SOURCE OF TRUTH:
+       * student.className comes from
+       * Data Murid column C in Code.gs.
        */
-      writeStudentCache(
+      allClasses =
+        Array.from(
+          new Set(
+            allStudents
+              .map(
+                function(student) {
+                  return String(
+                    student.className || ""
+                  ).trim();
+                }
+              )
+              .filter(Boolean)
+          )
+        ).sort(
+          function(a, b) {
+
+            return a.localeCompare(
+              b,
+              undefined,
+              {
+                numeric: true,
+                sensitivity: "base"
+              }
+            );
+
+          }
+        );
+
+      satsStudentsReady =
+        allStudents.length > 0;
+
+      selectedStudentIds.clear();
+
+      populateClassDropdowns();
+
+      if (
+        typeof populateAllClassSelectors ===
+        "function"
+      ) {
+        populateAllClassSelectors();
+      }
+
+      renderStudents(
         allStudents
       );
 
-      renderStudentCache();
+      updatePrintButton(
+        allStudents.length
+      );
 
     }
   );
 
 }
+
 
 
 function populateClassDropdowns() {
@@ -10140,7 +10197,6 @@ function addClassSetting() {
       data.classes || []
     );
 
-    loadClasses();
     loadStudents();
 
   });
