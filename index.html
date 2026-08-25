@@ -1353,6 +1353,22 @@ img, video, canvas {
   }
 }
 
+
+/* FINAL TOP BAR FIX */
+#schoolName, .school-name, .school-title, .school-header-title {
+  white-space: nowrap !important;
+  display: block !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  line-height: 1.15 !important;
+}
+@media (max-width: 650px) {
+  #schoolName, .school-name, .school-title, .school-header-title {
+    font-size: clamp(13px, 4.6vw, 20px) !important;
+    white-space: nowrap !important;
+  }
+}
+
 </style>
 
 
@@ -5119,89 +5135,6 @@ function callSATS(
 
 
 
-function setSATSConnectionStatus(
-  state,
-  message
-) {
-
-  const status =
-    document.getElementById(
-      "satsConnectionStatus"
-    );
-
-  if (!status) return;
-
-  if (state === "connected") {
-
-    status.innerHTML =
-      '<span style="display:inline-flex;align-items:center;gap:6px;">' +
-      '<span style="width:8px;height:8px;border-radius:50%;background:#16a34a;display:inline-block;"></span>' +
-      '<span>SATS Connected</span>' +
-      '</span>';
-
-    status.style.color =
-      "#166534";
-
-    status.style.background =
-      "#ecfdf5";
-
-    status.style.borderColor =
-      "#bbf7d0";
-
-    return;
-  }
-
-  if (state === "loading") {
-
-    status.innerHTML =
-      '<span style="display:inline-flex;align-items:center;gap:6px;">' +
-      '<span>⏳</span>' +
-      '<span>' +
-      escapeHtml(
-        message ||
-        "..."
-      ) +
-      '</span>' +
-      '</span>';
-
-    status.style.color =
-      "#92400e";
-
-    status.style.background =
-      "#fffbeb";
-
-    status.style.borderColor =
-      "#fde68a";
-
-    return;
-  }
-
-  status.innerHTML =
-    '<span style="display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;">' +
-    '<span>🔴</span>' +
-    '<span>' +
-    escapeHtml(
-      message ||
-      "Ralat sambungan ke SATS."
-    ) +
-    '</span>' +
-    '<button type="button" onclick="bootSATS(true)" ' +
-    'style="border:0;background:#991b1b;color:#fff;border-radius:7px;padding:4px 9px;cursor:pointer;">' +
-    'Cuba Semula' +
-    '</button>' +
-    '</span>';
-
-  status.style.color =
-    "#991b1b";
-
-  status.style.background =
-    "#fef2f2";
-
-  status.style.borderColor =
-    "#fecaca";
-
-}
-
 
 function ensureSATSConnectionBar() {
 
@@ -5234,7 +5167,7 @@ function ensureSATSConnectionBar() {
     "box-sizing:border-box;";
 
   status.innerHTML =
-    "⏳ ...";
+    "";
 
   const topbar =
     document.querySelector(
