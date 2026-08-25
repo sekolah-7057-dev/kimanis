@@ -1593,7 +1593,7 @@ input:focus-visible {
       id="schoolName"
       class="school-name"
     >
-      SATS
+      SK KIMANIS PAPAR
     </div>
 
     <div class="system-name">
@@ -1656,12 +1656,7 @@ input:focus-visible {
     ▦ Kalendar Sekolah
   </button>
 
-<button
-    id="navSettings"
-    onclick="showPage('settings')"
-  >
-    ⚙ Tetapan
-  </button>
+
 
 </div>
 
@@ -2426,99 +2421,6 @@ input:focus-visible {
 
   </section>
 
-
-
-
-  <!-- SETTINGS PAGE -->
-  <section id="settings" class="page">
-
-    <div class="card">
-      <h2>⚙️ Tetapan Sekolah</h2>
-
-      <label>Nama Sekolah</label>
-      <input
-        id="schoolNameSetting"
-        class="form-input"
-        placeholder="Nama sekolah"
-      >
-      <button
-        class="print-button"
-        style="margin-top:10px;"
-        onclick="saveSchoolNameSetting()"
-      >
-        💾 Simpan Nama Sekolah
-      </button>
-    </div>
-
-    <div class="card">
-      <h2>🖼️ Logo Sekolah</h2>
-
-      <p style="color:#6b7280;">
-        Pilih logo sekolah dari komputer anda. Logo akan dikecilkan
-        secara automatik supaya sesuai disimpan dalam sistem SATS.
-      </p>
-
-      <input
-        id="schoolLogoFile"
-        class="form-input"
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        onchange="previewSchoolLogoFile(this)"
-      >
-
-      <input
-        id="schoolLogoSetting"
-        type="hidden"
-      >
-
-      <div style="margin-top:12px;">
-        <img
-          id="schoolLogoPreview"
-          alt="Logo Sekolah"
-          style="max-width:140px;max-height:140px;display:none;object-fit:contain;"
-        >
-      </div>
-
-      <button
-        class="print-button"
-        style="margin-top:10px;"
-        onclick="uploadSchoolLogo()"
-      >
-        🖼️ Upload & Simpan Logo
-      </button>
-    </div>
-
-    <div
-      id="classManagementCard"
-      class="card"
-    >
-      <h2>👩‍🏫 Senarai Kelas</h2>
-
-      <div
-        id="classManagementControls"
-        style="display:grid;grid-template-columns:1fr auto;gap:10px;"
-      >
-        <input
-          id="newClassSetting"
-          class="form-input"
-          placeholder="Contoh: 5A"
-        >
-
-        <button
-          class="print-button"
-          onclick="addClassSetting()"
-        >
-          ➕ Tambah
-        </button>
-      </div>
-
-      <div
-        id="settingsClassList"
-        style="margin-top:15px;"
-      ></div>
-    </div>
-
-  </section>
 
 
 
@@ -5321,6 +5223,10 @@ function renderStudentDataFromCache() {
 function applySchoolSettings(
   data
 ) {
+
+  const fixedSchoolName =
+    "SK KIMANIS PAPAR";
+
 
   const settings =
     data && (
@@ -9679,7 +9585,7 @@ function loadSchoolSettings() {
    */
   applySchoolSettings({
     settings: {
-      schoolName: "SATS",
+      schoolName: "SK KIMANIS PAPAR",
       schoolLogo:
         SATS_DEFAULT_SCHOOL_LOGO
     }
