@@ -9635,10 +9635,26 @@ function matchStudentFromLoadedData(
    */
   const url =
     SATS_API +
-    "?action=scan" +
-    "&qr=" +
+    "?action=recordAttendance" +
+    "&studentId=" +
     encodeURIComponent(
       student.id
+    ) +
+    "&name=" +
+    encodeURIComponent(
+      student.name || ""
+    ) +
+    "&className=" +
+    encodeURIComponent(
+      student.className || ""
+    ) +
+    "&profile=" +
+    encodeURIComponent(
+      student.profile || ""
+    ) +
+    "&file=" +
+    encodeURIComponent(
+      student.file || ""
     );
 
   callSATS(
@@ -9653,14 +9669,14 @@ function matchStudentFromLoadedData(
             "SATS tidak memberi respons."
         };
 
-      if (
-        !response.student
-      ) {
-
-        response.student =
-          student;
-
-      }
+      /*
+       * NEVER replace a locally matched student with
+       * "QR TIDAK SAH". The student was already identified
+       * from Data Murid. A backend failure is a recording
+       * problem, not an invalid QR.
+       */
+      response.student =
+        student;
 
       displayScanResult(
         response
