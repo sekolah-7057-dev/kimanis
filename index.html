@@ -4951,6 +4951,21 @@ function callSATS(
   attempt =
     Number(attempt || 0);
 
+  /*
+   * Scanner must return quickly.
+   * A QR scan does not need three 20-second retries.
+   */
+  const isScan =
+    /[?&]action=scan(?:&|$)/.test(
+      url
+    );
+
+  const maxAttempts =
+    isScan ? 0 : 2;
+
+  const timeoutMs =
+    isScan ? 8000 : 20000;
+
   const callbackName =
     "satsCallback_" +
     Date.now() +
@@ -5034,7 +5049,7 @@ function callSATS(
 
       if (
         !finished &&
-        attempt < 2
+        attempt < maxAttempts
       ) {
 
         finished = true;
@@ -5055,7 +5070,7 @@ function callSATS(
             );
 
           },
-          700 * (attempt + 1)
+          500 * (attempt + 1)
         );
 
         return;
@@ -5069,7 +5084,9 @@ function callSATS(
         type: "connection",
 
         message:
-          "Tidak dapat memuat respons SATS.",
+          isScan
+            ? "Sambungan SATS gagal semasa semakan QR."
+            : "Tidak dapat memuat respons SATS.",
 
         debugUrl:
           finalUrl
@@ -5090,7 +5107,7 @@ function callSATS(
           return;
         }
 
-        if (attempt < 2) {
+        if (attempt < maxAttempts) {
 
           finished = true;
 
@@ -5106,7 +5123,7 @@ function callSATS(
               );
 
             },
-            700 * (attempt + 1)
+            500 * (attempt + 1)
           );
 
           return;
@@ -5120,7 +5137,9 @@ function callSATS(
           type: "timeout",
 
           message:
-            "SATS tidak memberi respons dalam 20 saat.",
+            isScan
+              ? "SATS tidak memberi respons dalam 8 saat."
+              : "SATS tidak memberi respons dalam 20 saat.",
 
           debugUrl:
             finalUrl
@@ -5128,13 +5147,10 @@ function callSATS(
         });
 
       },
-      20000
+      timeoutMs
     );
 
 }
-
-
-
 
 function ensureSATSConnectionBar() {
 
@@ -9435,7 +9451,7 @@ function processScan(
       "scannerStatus"
     )
     .innerText =
-    "⏳ Menyemak murid...";
+    "🔎 Menyemak QR...";
 
 
   const result =
@@ -9650,6 +9666,41 @@ function displayScanResult(
       )
       .innerText =
       "QR tidak terdapat dalam Data Murid.";
+
+    /*
+     * Diagnostic information is returned by QR-FIX-3.
+     * Show it temporarily so we can identify whether
+     * the deployed Web App is reading the correct sheet.
+     */
+    if (data.debug) {
+
+      const debugText =
+        [
+          "Backend: " +
+            (data.debug.version || "-"),
+
+          "Sheet: " +
+            (data.debug.sheet || "-"),
+
+          "Jumlah row: " +
+            (data.debug.lastRow || 0),
+
+          "QR diterima: " +
+            (data.debug.scanned || data.qrCode || "-"),
+
+          "QR normal: " +
+            (data.debug.normalizedScanned || "-")
+        ].join(" • ");
+
+      document
+        .getElementById(
+          "scannerStatus"
+        )
+        .innerText =
+        "QR tidak terdapat dalam Data Murid. " +
+        debugText;
+
+    }
       showScannerToast(
         "✕ QR tidak sah",
         "error"
