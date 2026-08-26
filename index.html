@@ -6340,13 +6340,18 @@ function renderManualAttendance(
 }
 
 
+
 function saveManualAttendance() {
 
   const date =
-    document.getElementById("manualDate").value;
+    document.getElementById(
+      "manualDate"
+    ).value;
 
   const className =
-    document.getElementById("manualClass").value;
+    document.getElementById(
+      "manualClass"
+    ).value;
 
   const rows =
     Array.from(
@@ -6355,100 +6360,218 @@ function saveManualAttendance() {
       )
     );
 
-  if (!date || !className) {
-    alert("Sila pilih tarikh dan kelas.");
+  if (
+    !date ||
+    !className
+  ) {
+
+    alert(
+      "Sila pilih tarikh dan kelas."
+    );
+
     return;
+
   }
 
-  if (!rows.length) {
-    alert("Tiada murid untuk disimpan.");
+  if (
+    !rows.length
+  ) {
+
+    alert(
+      "Tiada murid untuk disimpan."
+    );
+
     return;
+
   }
 
   const entries =
     rows
-      .filter(function(row) {
-        return row.dataset.locked !== "1";
-      })
-      .map(function(row) {
+      .filter(
+        function(row) {
 
-        return {
-          id:
-            row.getAttribute(
-              "data-student-id"
-            ),
+          return (
+            row.dataset.locked !==
+            "1"
+          );
 
-          status:
+        }
+      )
+      .map(
+        function(row) {
+
+          const status =
             row.querySelector(
               ".manual-status"
-            ).value,
+            );
 
-          reason:
+          const reason =
             row.querySelector(
               ".manual-reason"
-            ).value,
+            );
 
-          note:
+          const note =
             row.querySelector(
               ".manual-note"
-            ).value
-        };
+            );
 
-      });
+          return {
 
-  if (!entries.length) {
+            id:
+              row.getAttribute(
+                "data-student-id"
+              ),
+
+            status:
+              status
+                ? status.value
+                : "Hadir",
+
+            reason:
+              reason
+                ? reason.value
+                : "",
+
+            note:
+              note
+                ? note.value
+                : ""
+
+          };
+
+        }
+      );
+
+  if (
+    !entries.length
+  ) {
+
     alert(
       "Semua murid mempunyai rekod QR. Tiada rekod manual untuk disimpan."
     );
+
     return;
+
   }
 
+  /*
+   * IMPORTANT:
+   * Use the new endpoint that has already been
+   * proven to save correctly into Attendance.
+   */
   callSATS(
     SATS_API +
-    "?action=saveManualAttendance" +
+    "?action=saveManualAttendanceV2" +
     "&date=" +
-    encodeURIComponent(date) +
+    encodeURIComponent(
+      date
+    ) +
     "&className=" +
-    encodeURIComponent(className) +
+    encodeURIComponent(
+      className
+    ) +
     "&entries=" +
     encodeURIComponent(
-      JSON.stringify(entries)
+      JSON.stringify(
+        entries
+      )
     ),
 
     function(data) {
 
-      if (!data || !data.success) {
+      if (
+        !data ||
+        !data.success
+      ) {
+
+        let message =
+          (
+            data &&
+            data.message
+          ) ||
+          "Gagal menyimpan kehadiran manual.";
+
+        /*
+         * V2 returns per-student diagnostics.
+         */
+        if (
+          data &&
+          Array.isArray(
+            data.results
+          )
+        ) {
+
+          const failed =
+            data.results
+              .filter(
+                function(item) {
+                  return (
+                    !item.success &&
+                    item.type !==
+                    "duplicate"
+                  );
+                }
+              );
+
+          if (
+            failed.length
+          ) {
+
+            message +=
+              "\n\n" +
+              failed
+                .map(
+                  function(item) {
+
+                    return (
+                      item.id +
+                      ": " +
+                      (
+                        item.message ||
+                        "Gagal"
+                      )
+                    );
+
+                  }
+                )
+                .join(
+                  "\n"
+                );
+
+          }
+
+        }
 
         alert(
-          (data && data.message) ||
-          "Gagal menyimpan kehadiran manual."
+          message
         );
 
         return;
+
       }
 
       alert(
-        "Kehadiran manual berjaya disimpan."
+        "✓ Kehadiran manual berjaya disimpan.\n\n" +
+        "Rekod disimpan: " +
+        (
+          data.saved ||
+          0
+        ) +
+        " / " +
+        (
+          data.total ||
+          entries.length
+        )
       );
 
       loadManualAttendance();
 
     }
+
   );
 
 }
 
-
-
-/* =====================================================
-   STUDENT CACHE
-   ===================================================== */
-
-const SATS_STUDENT_CACHE_KEY =
-  "SATS_STUDENTS_CACHE_V1";
-
-const SATS_STUDENT_CACHE_MAX_AGE =
-  60 * 60 * 1000; // 1 jam
 
 
 function readStudentCache() {
