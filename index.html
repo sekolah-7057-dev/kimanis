@@ -4951,21 +4951,6 @@ function callSATS(
   attempt =
     Number(attempt || 0);
 
-  /*
-   * Scanner must return quickly.
-   * A QR scan does not need three 20-second retries.
-   */
-  const isScan =
-    /[?&]action=scan(?:&|$)/.test(
-      url
-    );
-
-  const maxAttempts =
-    isScan ? 0 : 2;
-
-  const timeoutMs =
-    isScan ? 8000 : 20000;
-
   const callbackName =
     "satsCallback_" +
     Date.now() +
@@ -5049,7 +5034,7 @@ function callSATS(
 
       if (
         !finished &&
-        attempt < maxAttempts
+        attempt < 2
       ) {
 
         finished = true;
@@ -5070,7 +5055,7 @@ function callSATS(
             );
 
           },
-          500 * (attempt + 1)
+          700 * (attempt + 1)
         );
 
         return;
@@ -5084,9 +5069,7 @@ function callSATS(
         type: "connection",
 
         message:
-          isScan
-            ? "Sambungan SATS gagal semasa semakan QR."
-            : "Tidak dapat memuat respons SATS.",
+          "Tidak dapat memuat respons SATS.",
 
         debugUrl:
           finalUrl
@@ -5107,7 +5090,7 @@ function callSATS(
           return;
         }
 
-        if (attempt < maxAttempts) {
+        if (attempt < 2) {
 
           finished = true;
 
@@ -5123,7 +5106,7 @@ function callSATS(
               );
 
             },
-            500 * (attempt + 1)
+            700 * (attempt + 1)
           );
 
           return;
@@ -5137,9 +5120,7 @@ function callSATS(
           type: "timeout",
 
           message:
-            isScan
-              ? "SATS tidak memberi respons dalam 8 saat."
-              : "SATS tidak memberi respons dalam 20 saat.",
+            "SATS tidak memberi respons dalam 20 saat.",
 
           debugUrl:
             finalUrl
@@ -5147,10 +5128,13 @@ function callSATS(
         });
 
       },
-      timeoutMs
+      20000
     );
 
 }
+
+
+
 
 function ensureSATSConnectionBar() {
 
@@ -9445,40 +9429,241 @@ function processScan(
   qrCode
 ) {
 
-
-  document
-    .getElementById(
+  const scannerStatus =
+    document.getElementById(
       "scannerStatus"
-    )
-    .innerText =
-    "🔎 Menyemak QR...";
-
+    );
 
   const result =
     document.getElementById(
       "scanResult"
     );
 
+  const scannedQr =
+    String(
+      qrCode || ""
+    ).trim();
+
+  scannerStatus.innerText =
+    "🔎 Memadankan QR dengan Data Murid...";
 
   result.style.display =
     "block";
 
+  if (!scannedQr) {
 
+    displayScanResult({
+      success: false,
+      type: "not_found",
+      message: "QR kosong.",
+      qrCode: scannedQr
+    });
+
+    return;
+
+  }
+
+  /*
+   * IMPORTANT:
+   * Student identification is done against the
+   * Data Murid list already loaded by this HTML.
+   *
+   * SATS API is called only AFTER a student is found.
+   */
+
+  if (
+    !Array.isArray(allStudents) ||
+    !allStudents.length
+  ) {
+
+    loadStudentsDirectFromSheet(
+      function(
+        students,
+        error
+      ) {
+
+        if (
+          error ||
+          !Array.isArray(students) ||
+          !students.length
+        ) {
+
+          displayScanResult({
+            success: false,
+            type: "error",
+            message:
+              "Data Murid belum berjaya dimuatkan.",
+            qrCode: scannedQr
+          });
+
+          return;
+
+        }
+
+        matchStudentFromLoadedData(
+          students,
+          scannedQr
+        );
+
+      }
+    );
+
+    return;
+
+  }
+
+  matchStudentFromLoadedData(
+    allStudents,
+    scannedQr
+  );
+
+}
+
+
+/* =================================================
+   MATCH QR WITH DATA MURID
+   ================================================= */
+
+function normalizeStudentKey(
+  value
+) {
+
+  return String(
+    value || ""
+  )
+    .replace(
+      /[\u200B-\u200D\uFEFF]/g,
+      ""
+    )
+    .replace(
+      /\s+/g,
+      ""
+    )
+    .trim()
+    .toUpperCase();
+
+}
+
+
+function matchStudentFromLoadedData(
+  students,
+  scannedQr
+) {
+
+  const scannedKey =
+    normalizeStudentKey(
+      scannedQr
+    );
+
+  const student =
+    students.find(
+      function(item) {
+
+        /*
+         * Primary match:
+         * scanned QR = Data Murid ID
+         */
+        if (
+          normalizeStudentKey(
+            item.id
+          ) ===
+          scannedKey
+        ) {
+
+          return true;
+
+        }
+
+        /*
+         * Fallback:
+         * scanned QR = Data Murid QR CODE
+         */
+        if (
+          item.qr &&
+          normalizeStudentKey(
+            item.qr
+          ) ===
+          scannedKey
+        ) {
+
+          return true;
+
+        }
+
+        return false;
+
+      }
+    );
+
+  if (!student) {
+
+    displayScanResult({
+      success: false,
+      type: "not_found",
+      message:
+        "QR tidak sepadan dengan ID atau QR CODE dalam Data Murid.",
+      qrCode: scannedQr
+    });
+
+    return;
+
+  }
+
+  /*
+   * Student is known immediately.
+   * Show the correct student before waiting for SATS.
+   */
+  showStudent(
+    student
+  );
+
+  setAttendanceStatus(
+    "⏳ Merekod kehadiran...",
+    "warning"
+  );
+
+  scannerStatus.innerText =
+    "✓ Murid dijumpai: " +
+    (
+      student.name ||
+      student.id
+    );
+
+  /*
+   * Send the already matched ID to SATS.
+   * The backend is used for attendance recording.
+   */
   const url =
     SATS_API +
     "?action=scan" +
     "&qr=" +
     encodeURIComponent(
-      qrCode
+      student.id
     );
-
 
   callSATS(
     url,
     function(data) {
 
+      const response =
+        data || {
+          success: false,
+          type: "error",
+          message:
+            "SATS tidak memberi respons."
+        };
+
+      if (
+        !response.student
+      ) {
+
+        response.student =
+          student;
+
+      }
+
       displayScanResult(
-        data
+        response
       );
 
     }
@@ -9666,41 +9851,6 @@ function displayScanResult(
       )
       .innerText =
       "QR tidak terdapat dalam Data Murid.";
-
-    /*
-     * Diagnostic information is returned by QR-FIX-3.
-     * Show it temporarily so we can identify whether
-     * the deployed Web App is reading the correct sheet.
-     */
-    if (data.debug) {
-
-      const debugText =
-        [
-          "Backend: " +
-            (data.debug.version || "-"),
-
-          "Sheet: " +
-            (data.debug.sheet || "-"),
-
-          "Jumlah row: " +
-            (data.debug.lastRow || 0),
-
-          "QR diterima: " +
-            (data.debug.scanned || data.qrCode || "-"),
-
-          "QR normal: " +
-            (data.debug.normalizedScanned || "-")
-        ].join(" • ");
-
-      document
-        .getElementById(
-          "scannerStatus"
-        )
-        .innerText =
-        "QR tidak terdapat dalam Data Murid. " +
-        debugText;
-
-    }
       showScannerToast(
         "✕ QR tidak sah",
         "error"
