@@ -4949,7 +4949,9 @@ function callSATS(
 ) {
 
   attempt =
-    Number(attempt || 0);
+    Number(
+      attempt || 0
+    );
 
   const callbackName =
     "satsCallback_" +
@@ -4962,7 +4964,9 @@ function callSATS(
   let finished = false;
 
   const script =
-    document.createElement("script");
+    document.createElement(
+      "script"
+    );
 
   const separator =
     url.indexOf("?") >= 0
@@ -4982,14 +4986,22 @@ function callSATS(
   const cleanup =
     function() {
 
-      if (script.parentNode) {
+      if (
+        script.parentNode
+      ) {
+
         script.parentNode.removeChild(
           script
         );
+
       }
 
       try {
-        delete window[callbackName];
+
+        delete window[
+          callbackName
+        ];
+
       } catch(error) {}
 
     };
@@ -5009,15 +5021,28 @@ function callSATS(
 
       cleanup();
 
-      if (typeof callback === "function") {
-        callback(data);
+      if (
+        typeof callback ===
+        "function"
+      ) {
+
+        callback(
+          data
+        );
+
       }
 
     };
 
-  window[callbackName] =
+  window[
+    callbackName
+  ] =
     function(data) {
-      finish(data);
+
+      finish(
+        data
+      );
+
     };
 
   script.src =
@@ -5032,107 +5057,46 @@ function callSATS(
   script.onerror =
     function() {
 
-      if (
-        !finished &&
-        attempt < 2
-      ) {
-
-        finished = true;
-
-        clearTimeout(
-          timeoutId
-        );
-
-        cleanup();
-
-        setTimeout(
-          function() {
-
-            callSATS(
-              url,
-              callback,
-              attempt + 1
-            );
-
-          },
-          700 * (attempt + 1)
-        );
-
-        return;
-
-      }
-
+      /*
+       * Do NOT retry attendance writes.
+       * A retry can create duplicate attendance if
+       * the server actually saved the first request.
+       */
       finish({
-
         success: false,
-
-        type: "connection",
-
+        type: "transport_error",
         message:
-          "Tidak dapat memuat respons SATS.",
-
-        debugUrl:
-          finalUrl
-
+          "SATS tidak dapat dihubungi.",
+        detail:
+          "Permintaan dihantar tetapi respons JSONP tidak diterima."
       });
 
     };
 
-  document.body.appendChild(
-    script
-  );
+  document
+    .head
+    .appendChild(
+      script
+    );
 
   const timeoutId =
     setTimeout(
       function() {
 
-        if (finished) {
-          return;
-        }
-
-        if (attempt < 2) {
-
-          finished = true;
-
-          cleanup();
-
-          setTimeout(
-            function() {
-
-              callSATS(
-                url,
-                callback,
-                attempt + 1
-              );
-
-            },
-            700 * (attempt + 1)
-          );
-
-          return;
-
-        }
-
         finish({
-
           success: false,
-
           type: "timeout",
-
           message:
-            "SATS tidak memberi respons dalam 20 saat.",
-
-          debugUrl:
-            finalUrl
-
+            "SATS tidak memberi respons.",
+          detail:
+            "SATS menerima permintaan tetapi respons tidak diterima dalam tempoh 12 saat."
         });
 
       },
-      20000
+      12000
     );
 
 }
-
 
 
 
@@ -9812,6 +9776,55 @@ function displayScanResult(
 
 
 
+
+    return;
+
+  }
+
+
+  if (
+    data.type ===
+      "timeout" ||
+    data.type ===
+      "transport_error"
+  ) {
+
+    if (
+      data.student
+    ) {
+
+      showStudent(
+        data.student
+      );
+
+      setAttendanceStatus(
+        "⚠ KEHADIRAN BELUM DISAHKAN",
+        "error"
+      );
+
+      document
+        .getElementById(
+          "scannerStatus"
+        )
+        .innerText =
+        "Murid dijumpai, tetapi respons penyimpanan SATS tidak diterima.";
+
+    } else {
+
+      setAttendanceStatus(
+        "✕ Tidak dapat memuat respons SATS",
+        "error"
+      );
+
+      document
+        .getElementById(
+          "scannerStatus"
+        )
+        .innerText =
+        data.message ||
+        "SATS tidak memberi respons.";
+
+    }
 
     return;
 
