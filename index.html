@@ -5935,7 +5935,7 @@ function manualStatusOptions(status, locked) {
     '<select class="form-input manual-status" ' +
     (locked ? "disabled" : "") +
     '>' +
-      '<option value="Hadir" ' +
+      '<option value="Tidak Hadir" ' +
         (status === "Hadir" ? "selected" : "") +
         '>🟢 Hadir</option>' +
       '<option value="Tidak Hadir" ' +
@@ -6113,7 +6113,7 @@ function loadManualAttendance() {
                       student.className,
 
                     status:
-                      "Hadir",
+                      "Tidak Hadir",
 
                     reason:
                       "",
@@ -6214,7 +6214,7 @@ function loadManualAttendance() {
                     attendance &&
                     attendance.status
                       ? attendance.status
-                      : "Hadir",
+                      : "Tidak Hadir",
 
                   reason:
                     attendance &&
@@ -6301,7 +6301,7 @@ function renderManualAttendance(
 
         "<td>" +
         manualStatusOptions(
-          student.status || "Hadir",
+          student.status || "Tidak Hadir",
           locked
         ) +
         "</td>" +
