@@ -6301,7 +6301,12 @@ function renderManualAttendance(
 
         "<td>" +
         manualStatusOptions(
-          student.status || "Tidak Hadir",
+          (
+            student.status === "Hadir" ||
+            student.status === "Tidak Hadir"
+          )
+            ? student.status
+            : "Tidak Hadir",
           locked
         ) +
         "</td>" +
