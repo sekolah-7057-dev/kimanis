@@ -2815,11 +2815,17 @@ body{
 
     <div class="page-title">📅 Kalendar Sekolah</div>
     <div class="page-subtitle">
-      Tetapkan hari persekolahan dan pengecualian daripada jadual lalai.
+      Kalendar rasmi Sabah/KPM digunakan sebagai asas. Pengecualian manual sekolah akan mengatasi kalendar rasmi.
     </div>
 
     <div class="card">
       <h3 id="calendarFormTitle">➕ Tambah Pengecualian Kalendar</h3>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+        <button type="button" class="button button-light" onclick="syncOfficialCalendar2026()">
+          🔄 KEMASKINI KALENDAR RASMI 2026
+        </button>
+      </div>
 
       <input id="calendarRowNumber" type="hidden">
 
@@ -2852,6 +2858,7 @@ body{
         placeholder="Keterangan, contoh: Kelas Ganti Sabtu / Cuti Sekolah">
 
       <div class="calendar-status-help">
+        <strong>Keutamaan:</strong> Kalendar rasmi Sabah/KPM → kemudian pengecualian manual sekolah. Rekod manual akan mengatasi status rasmi pada tarikh yang sama.<br>
         <strong>Peraturan lalai:</strong>
         Isnin–Jumaat = hari persekolahan. Sabtu–Ahad = bukan hari persekolahan.
         Rekod di sini akan mengatasi peraturan lalai.
@@ -2883,12 +2890,13 @@ body{
               <th>Tarikh Akhir</th>
               <th>Status</th>
               <th>Keterangan</th>
+              <th>Sumber</th>
               <th>Tindakan</th>
             </tr>
           </thead>
           <tbody id="schoolCalendarBody">
             <tr>
-              <td colspan="5" style="padding:15px;text-align:center;">Memuatkan kalendar...</td>
+              <td colspan="6" style="padding:15px;text-align:center;">Memuatkan kalendar...</td>
             </tr>
           </tbody>
         </table>
@@ -4752,6 +4760,7 @@ function formatReportDate(
    ================================================= */
 
 let schoolCalendarEntries = [];
+let officialSchoolCalendarEntries = [];
 
 function loadSchoolCalendar() {
 
@@ -4759,24 +4768,52 @@ function loadSchoolCalendar() {
   if (!body) return;
 
   body.innerHTML =
-    '<tr><td colspan="5" style="padding:15px;text-align:center;">Memuatkan kalendar...</td></tr>';
+    '<tr><td colspan="6" style="padding:15px;text-align:center;">Memuatkan kalendar rasmi Sabah/KPM...</td></tr>';
+
+  // Keep the official calendar available automatically. If 2026 is already present,
+  // the backend safely skips re-importing it.
+  callSATS(
+    SATS_API + "?action=syncOfficialCalendar2026",
+    function(syncData) {
+
+      callSATS(
+        SATS_API + "?action=getSchoolCalendar",
+        function(data) {
+
+          if (!data || !data.success) {
+            body.innerHTML =
+              '<tr><td colspan="6" style="padding:15px;text-align:center;color:#991b1b;">' +
+              escapeHtml((data && data.message) || "Gagal mendapatkan kalendar sekolah.") +
+              '</td></tr>';
+            return;
+          }
+
+          schoolCalendarEntries =
+            Array.isArray(data.calendar) ? data.calendar : [];
+
+          officialSchoolCalendarEntries =
+            Array.isArray(data.officialCalendar) ? data.officialCalendar : [];
+
+          renderSchoolCalendar();
+        }
+      );
+    }
+  );
+}
+
+function syncOfficialCalendar2026() {
 
   callSATS(
-    SATS_API + "?action=getSchoolCalendar",
+    SATS_API + "?action=syncOfficialCalendar2026",
     function(data) {
 
       if (!data || !data.success) {
-        body.innerHTML =
-          '<tr><td colspan="5" style="padding:15px;text-align:center;color:#991b1b;">' +
-          escapeHtml((data && data.message) || "Gagal mendapatkan kalendar sekolah.") +
-          '</td></tr>';
+        alert((data && data.message) || "Gagal mengemas kini kalendar rasmi.");
         return;
       }
 
-      schoolCalendarEntries =
-        Array.isArray(data.calendar) ? data.calendar : [];
-
-      renderSchoolCalendar();
+      alert(data.message || "Kalendar rasmi telah dikemas kini.");
+      loadSchoolCalendar();
     }
   );
 }
@@ -4786,62 +4823,73 @@ function renderSchoolCalendar() {
   const body = document.getElementById("schoolCalendarBody");
   if (!body) return;
 
-  if (!schoolCalendarEntries.length) {
+  const official = Array.isArray(officialSchoolCalendarEntries)
+    ? officialSchoolCalendarEntries
+    : [];
+  const manual = Array.isArray(schoolCalendarEntries)
+    ? schoolCalendarEntries
+    : [];
+
+  if (!official.length && !manual.length) {
     body.innerHTML =
-      '<tr><td colspan="5" style="padding:15px;text-align:center;">Tiada pengecualian. Peraturan lalai masih digunakan.</td></tr>';
+      '<tr><td colspan="6" style="padding:15px;text-align:center;">Tiada rekod kalendar.</td></tr>';
     return;
   }
 
-  const seen = new Set();
+  const rows = [];
 
-  const uniqueEntries =
-    schoolCalendarEntries.filter(function(entry) {
+  official.forEach(function(entry) {
+    let badgeClass = "non-schooling";
+    let label = "🔴 Bukan Hari Persekolahan";
+    if (entry.status === "SCHOOLING") {
+      badgeClass = "schooling";
+      label = "🟢 Hari Persekolahan";
+    } else if (entry.status === "HOLIDAY") {
+      badgeClass = "holiday";
+      label = "🏖️ Cuti";
+    }
 
-      const key =
-        String(entry.startDate || "") + "|" +
-        String(entry.endDate || "") + "|" +
-        String(entry.status || "") + "|" +
-        String(entry.description || "").trim();
+    rows.push(
+      "<tr>" +
+        "<td>" + escapeHtml(formatCalendarDate(entry.startDate)) + "</td>" +
+        "<td>" + escapeHtml(formatCalendarDate(entry.endDate)) + "</td>" +
+        '<td><span class="calendar-badge ' + badgeClass + '">' + label + "</span></td>" +
+        "<td>" + escapeHtml(entry.description || "") + "</td>" +
+        '<td><small>' + escapeHtml(entry.source || "Kalendar rasmi") + "</small></td>" +
+        '<td><span class="calendar-action-button" style="cursor:default;">🔒 Rasmi</span></td>' +
+      "</tr>"
+    );
+  });
 
-      if (seen.has(key)) {
-        return false;
-      }
+  manual.forEach(function(entry) {
+    let badgeClass = "non-schooling";
+    let label = "🔴 Bukan Hari Persekolahan";
+    if (entry.status === "SCHOOLING") {
+      badgeClass = "schooling";
+      label = "🟢 Hari Persekolahan";
+    } else if (entry.status === "HOLIDAY") {
+      badgeClass = "holiday";
+      label = "🏖️ Cuti";
+    }
 
-      seen.add(key);
-      return true;
+    rows.push(
+      "<tr>" +
+        "<td>" + escapeHtml(formatCalendarDate(entry.startDate)) + "</td>" +
+        "<td>" + escapeHtml(formatCalendarDate(entry.endDate)) + "</td>" +
+        '<td><span class="calendar-badge ' + badgeClass + '">' + label + "</span></td>" +
+        "<td>" + escapeHtml(entry.description || "") + "</td>" +
+        '<td><small>MANUAL / SEKOLAH</small></td>' +
+        "<td><div class=\"calendar-actions\">" +
+          '<button type="button" class="calendar-action-button" onclick="editSchoolCalendarEntry(' +
+            Number(entry.rowNumber || 0) + '">✏️ Edit</button>' +
+          '<button type="button" class="calendar-action-button delete" onclick="deleteSchoolCalendarEntry(' +
+            Number(entry.rowNumber || 0) + '">🗑️ Padam</button>' +
+        "</div></td>" +
+      "</tr>"
+    );
+  });
 
-    });
-
-  body.innerHTML =
-    uniqueEntries.map(function(entry) {
-
-      const status = String(entry.status || "");
-      let badgeClass = "non-schooling";
-      let label = "🔴 Bukan Hari Persekolahan";
-
-      if (status === "SCHOOLING") {
-        badgeClass = "schooling";
-        label = "🟢 Hari Persekolahan";
-      } else if (status === "HOLIDAY") {
-        badgeClass = "holiday";
-        label = "🏖️ Cuti";
-      }
-
-      return (
-        "<tr>" +
-          "<td>" + escapeHtml(formatCalendarDate(entry.startDate)) + "</td>" +
-          "<td>" + escapeHtml(formatCalendarDate(entry.endDate)) + "</td>" +
-          '<td><span class="calendar-badge ' + badgeClass + '">' + label + "</span></td>" +
-          "<td>" + escapeHtml(entry.description || "") + "</td>" +
-          "<td><div class=\"calendar-actions\">" +
-            '<button type="button" class="calendar-action-button" onclick="editSchoolCalendarEntry(' +
-              Number(entry.rowNumber || 0) + ')">✏️ Edit</button>' +
-            '<button type="button" class="calendar-action-button delete" onclick="deleteSchoolCalendarEntry(' +
-              Number(entry.rowNumber || 0) + ')">🗑️ Padam</button>' +
-          "</div></td>" +
-        "</tr>"
-      );
-    }).join("");
+  body.innerHTML = rows.join("");
 }
 
 function formatCalendarDate(value) {
