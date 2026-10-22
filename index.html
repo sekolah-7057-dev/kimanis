@@ -2866,9 +2866,15 @@ body{
       <h3 id="calendarFormTitle">➕ Tambah Pengecualian Kalendar</h3>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
-        <button type="button" class="button button-light" onclick="syncOfficialCalendar2026()">
-          🔄 KEMASKINI KALENDAR RASMI 2026
+        <button type="button" class="button button-light" onclick="confirmOfficialSchoolCalendar()">
+          🔒 SAHKAN KALENDAR RASMI
         </button>
+        <button type="button" class="button button-light" onclick="updateOfficialSchoolCalendar()">
+          🔄 KEMAS KINI KALENDAR RASMI
+        </button>
+        <div id="officialCalendarLockStatus" style="width:100%;font-size:13px;color:#475569;">
+          Kalendar menggunakan salinan tersimpan. Ia tidak dikemas kini secara automatik apabila aplikasi dibuka.
+        </div>
       </div>
 
       <input id="calendarRowNumber" type="hidden">
@@ -4841,21 +4847,48 @@ function loadSchoolCalendar() {
   );
 }
 
-function syncOfficialCalendar2026() {
+function confirmOfficialSchoolCalendar() {
+  const ok = confirm(
+    "Sahkan kalendar rasmi Sabah daripada laman Kerajaan Negeri Sabah?\\n\\n" +
+    "SATS akan mengambil data rasmi, menyimpannya dalam sistem dan menggunakannya " +
+    "setiap kali aplikasi dibuka. Teruskan?"
+  );
+  if (!ok) return;
+  runOfficialSchoolCalendarSave("confirm");
+}
 
+function updateOfficialSchoolCalendar() {
+  const ok = confirm(
+    "Kemas kini kalendar rasmi daripada laman Kerajaan Negeri Sabah dan sahkan semula?\\n\\n" +
+    "Jika sumber rasmi gagal dibaca atau data tidak lengkap, kalendar tersimpan sekarang akan dikekalkan."
+  );
+  if (!ok) return;
+  runOfficialSchoolCalendarSave("update");
+}
+
+function runOfficialSchoolCalendarSave(mode) {
+  const status = document.getElementById("officialCalendarLockStatus");
+  if (status) status.textContent = "Mengambil dan mengesahkan data daripada laman rasmi Sabah...";
   callSATS(
     SATS_API + "?action=syncOfficialCalendar2026",
     function(data) {
-
       if (!data || !data.success) {
+        if (status) status.textContent = "Kalendar tersimpan tidak diganti. Kemas kini gagal.";
         alert((data && data.message) || "Gagal mengemas kini kalendar rasmi.");
         return;
       }
-
-      alert(data.message || "Kalendar rasmi tersimpan telah dikemas kini.");
+      if (status) {
+        status.textContent = "🔒 Kalendar rasmi disahkan dan tersimpan. Sumber: sabah.gov.my. Kalendar kekal sehingga kemas kini disahkan semula.";
+      }
+      alert(data.message || "Kalendar rasmi telah disimpan.");
       loadSchoolCalendar();
     }
   );
+}
+
+// Compatibility with any existing in-page references.
+function syncOfficialCalendar2026() {
+  updateOfficialSchoolCalendar();
 }
 
 function renderSchoolCalendar() {
@@ -6151,6 +6184,21 @@ function loadManualAttendance() {
       students,
       studentError
     ) {
+
+      // Use the same active-student rule as the GS backend:
+      // ID, name and class must be complete, and each ID counts once.
+      if (Array.isArray(students)) {
+        const seenDashboardIds = Object.create(null);
+        students = students.filter(function(student) {
+          const id = String(student && student.id || "").trim();
+          const name = String(student && student.name || "").trim();
+          const className = String(student && student.className || "").trim();
+          if (!id || !name || !className) return false;
+          if (Object.prototype.hasOwnProperty.call(seenDashboardIds, id)) return false;
+          seenDashboardIds[id] = true;
+          return true;
+        });
+      }
 
       if (
         !Array.isArray(students) ||
