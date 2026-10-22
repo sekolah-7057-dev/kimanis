@@ -4807,40 +4807,36 @@ let schoolCalendarEntries = [];
 let officialSchoolCalendarEntries = [];
 
 function loadSchoolCalendar() {
-
   const body = document.getElementById("schoolCalendarBody");
   if (!body) return;
 
   body.innerHTML =
-    '<tr><td colspan="6" style="padding:15px;text-align:center;">Memuatkan kalendar rasmi Sabah/KPM...</td></tr>';
+    '<tr><td colspan="6" style="padding:15px;text-align:center;">Memuatkan kalendar tersimpan...</td></tr>';
 
-  // Keep the official calendar available automatically. If 2026 is already present,
-  // the backend safely skips re-importing it.
+  // Baca kalendar yang telah disimpan tanpa penyegerakan automatik.
   callSATS(
-    SATS_API + "?action=syncOfficialCalendar2026",
-    function(syncData) {
+    SATS_API + "?action=getSchoolCalendar",
+    function(data) {
+      if (!data || !data.success) {
+        body.innerHTML =
+          '<tr><td colspan="6" style="padding:15px;text-align:center;color:#991b1b;">' +
+          escapeHtml(
+            (data && data.message) ||
+            "Gagal mendapatkan kalendar sekolah."
+          ) +
+          '</td></tr>';
+        return;
+      }
 
-      callSATS(
-        SATS_API + "?action=getSchoolCalendar",
-        function(data) {
+      schoolCalendarEntries =
+        Array.isArray(data.calendar) ? data.calendar : [];
 
-          if (!data || !data.success) {
-            body.innerHTML =
-              '<tr><td colspan="6" style="padding:15px;text-align:center;color:#991b1b;">' +
-              escapeHtml((data && data.message) || "Gagal mendapatkan kalendar sekolah.") +
-              '</td></tr>';
-            return;
-          }
+      officialSchoolCalendarEntries =
+        Array.isArray(data.officialCalendar)
+          ? data.officialCalendar
+          : [];
 
-          schoolCalendarEntries =
-            Array.isArray(data.calendar) ? data.calendar : [];
-
-          officialSchoolCalendarEntries =
-            Array.isArray(data.officialCalendar) ? data.officialCalendar : [];
-
-          renderSchoolCalendar();
-        }
-      );
+      renderSchoolCalendar();
     }
   );
 }
@@ -5262,7 +5258,7 @@ function callSATS(
         });
 
       },
-      25000
+      20000
     );
 
 }
@@ -10276,13 +10272,6 @@ function loadDashboard() {
             !data ||
             !data.success
           ) {
-
-            console.error(
-              "SATS getDashboard gagal:",
-              data || "Tiada respons JSONP",
-              "Tarikh:", reportDate,
-              "Kelas:", selectedClass
-            );
 
             document.getElementById(
               "totalStudents"
