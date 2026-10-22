@@ -7157,66 +7157,34 @@ function loadStudentsDirectFromSheet(
 
       }
 
-      const students =
-        rows
-          .slice(1)
-          .map(
-            function(row) {
+      const studentsById = Object.create(null);
+      const studentIds = [];
 
-              return {
+      rows.slice(1).forEach(function(row) {
+        const student = {
+          id: String(row[idIndex] || "").trim(),
+          name: String(row[nameIndex] || "").trim(),
+          className: String(row[classIndex] || "").trim(),
+          rmt: String(row[rmtIndex] || "").trim(),
+          qr: qrIndex >= 0 ? String(row[qrIndex] || "").trim() : "",
+          profile: profileIndex >= 0 ? String(row[profileIndex] || "").trim() : "",
+          file: fileIndex >= 0 ? String(row[fileIndex] || "").trim() : ""
+        };
 
-                id:
-                  String(
-                    row[idIndex] || ""
-                  ).trim(),
+        // SATS active-student rule: ID, name and class are all required.
+        if (!student.id || !student.name || !student.className) return;
 
-                name:
-                  String(
-                    row[nameIndex] || ""
-                  ).trim(),
+        // A repeated ID must not inflate dashboard, class or report totals.
+        // Preserve the first complete row; this does not edit the source sheet.
+        if (Object.prototype.hasOwnProperty.call(studentsById, student.id)) return;
 
-                className:
-                  String(
-                    row[classIndex] || ""
-                  ).trim(),
+        studentsById[student.id] = student;
+        studentIds.push(student.id);
+      });
 
-                rmt:
-                  String(
-                    row[rmtIndex] || ""
-                  ).trim(),
-
-                qr:
-                  qrIndex >= 0
-                    ? String(
-                        row[qrIndex] || ""
-                      ).trim()
-                    : "",
-
-                profile:
-                  profileIndex >= 0
-                    ? String(
-                        row[profileIndex] || ""
-                      ).trim()
-                    : "",
-
-                file:
-                  fileIndex >= 0
-                    ? String(
-                        row[fileIndex] || ""
-                      ).trim()
-                    : ""
-
-              };
-
-            }
-          )
-          .filter(
-            function(student) {
-              return Boolean(
-                student.id
-              );
-            }
-          );
+      const students = studentIds.map(function(id) {
+        return studentsById[id];
+      });
 
       if (
         !students.length
