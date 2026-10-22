@@ -4090,7 +4090,6 @@ function getIndividualClassStudents() {
   ).filter(function(student) {
 
     return (
-      String(student.name || "").trim() !== "" &&
       normalizeText(
         student.className
       ) ===
@@ -5263,7 +5262,7 @@ function callSATS(
         });
 
       },
-      20000
+      25000
     );
 
 }
@@ -5886,7 +5885,6 @@ function addNewStudent() {
           .value = "";
 
 
-        clearDirectStudentCache_();
         loadStudents();
 
 
@@ -6181,9 +6179,12 @@ function loadManualAttendance() {
           function(student) {
 
             return (
-              String(student.name || "").trim() !== "" &&
-              String(student.className || "").trim() ===
-              String(className || "").trim()
+              String(
+                student.className || ""
+              ).trim() ===
+              String(
+                className || ""
+              ).trim()
             );
 
           }
@@ -6802,9 +6803,7 @@ function renderStudentCache() {
   );
 
   updatePrintButton(
-    allStudents.filter(function(student) {
-      return String(student.name || "").trim() && String(student.className || "").trim();
-    }).length
+    allStudents.length
   );
 
   return true;
@@ -6840,8 +6839,6 @@ function refreshStudentsInBackground() {
         data.students
       );
 
-      clearDirectStudentCache_();
-
       writeStudentCache(
         allStudents
       );
@@ -6866,9 +6863,6 @@ function clearStudentCache() {
 
     localStorage.removeItem(
       SATS_STUDENT_CACHE_KEY
-    );
-    localStorage.removeItem(
-      SATS_DIRECT_STUDENT_CACHE_KEY
     );
 
   } catch(error) {}
@@ -7005,55 +6999,9 @@ function parseStudentCsv(text) {
 
 
 
-const SATS_DIRECT_STUDENT_CACHE_KEY = "SATS_DIRECT_STUDENT_CACHE_V1";
-const SATS_DIRECT_STUDENT_CACHE_TTL = 60 * 1000; // 60 saat untuk navigasi berulang
-
-function readDirectStudentCache_() {
-  try {
-    const raw = localStorage.getItem(SATS_DIRECT_STUDENT_CACHE_KEY);
-    if (!raw) return null;
-    const cache = JSON.parse(raw);
-    if (!cache || !Array.isArray(cache.students) || !cache.timestamp) return null;
-    if (Date.now() - cache.timestamp > SATS_DIRECT_STUDENT_CACHE_TTL) return null;
-    return cache.students;
-  } catch (error) {
-    return null;
-  }
-}
-
-function writeDirectStudentCache_(students) {
-  try {
-    localStorage.setItem(SATS_DIRECT_STUDENT_CACHE_KEY, JSON.stringify({
-      timestamp: Date.now(),
-      students: students
-    }));
-  } catch (error) {
-    // Storage may be disabled or full; direct sheet loading still works.
-  }
-}
-
-function clearDirectStudentCache_() {
-  try {
-    localStorage.removeItem(SATS_DIRECT_STUDENT_CACHE_KEY);
-  } catch (error) {}
-}
-
 function loadStudentsDirectFromSheet(
   done
 ) {
-
-  const cachedStudents = readDirectStudentCache_();
-  if (cachedStudents) {
-    allStudents = cachedStudents;
-    allClasses = Array.from(new Set(cachedStudents.map(function(student) {
-      return String(student.className || "").trim();
-    }).filter(Boolean))).sort(function(a, b) {
-      return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
-    });
-    satsStudentsReady = true;
-    if (typeof done === "function") done(cachedStudents);
-    return;
-  }
 
   const url =
     STUDENT_SHEET_CSV_URL +
@@ -7236,8 +7184,6 @@ function loadStudentsDirectFromSheet(
 
       }
 
-      writeDirectStudentCache_(students);
-
       allStudents =
         students;
 
@@ -7372,17 +7318,13 @@ function loadStudents() {
       );
 
       updatePrintButton(
-        allStudents.filter(function(student) {
-          return String(student.name || "").trim() && String(student.className || "").trim();
-        }).length
+        allStudents.length
       );
 
       console.log(
         "Data Murid direct Google Sheet:",
-        allStudents.filter(function(student) {
-          return String(student.name || "").trim() && String(student.className || "").trim();
-        }).length,
-        "murid lengkap (nama + kelas)"
+        allStudents.length,
+        "murid"
       );
 
     }
@@ -7600,9 +7542,7 @@ function filterStudents() {
     });
 
   renderStudents(filtered);
-  updatePrintButton(filtered.filter(function(student) {
-    return String(student.name || "").trim() && String(student.className || "").trim();
-  }).length);
+  updatePrintButton(filtered.length);
 
   const text =
     document.getElementById(
@@ -8330,7 +8270,6 @@ function saveEditedStudent() {
         );
 
         cancelEditStudent();
-        clearDirectStudentCache_();
         loadStudents();
 
       } else {
@@ -8396,7 +8335,6 @@ function deleteStudentFromApp(
         );
 
 
-        clearDirectStudentCache_();
         loadStudents();
 
       }
@@ -10297,12 +10235,18 @@ function loadDashboard() {
        * Count students from Data Murid itself.
        */
       const selectedStudents =
-        students.filter(function(student) {
-          const name = String(student.name || "").trim();
-          const className = String(student.className || "").trim();
-          if (!name || !className) return false;
-          return !selectedClass || className === selectedClass;
-        });
+        selectedClass
+          ? students.filter(
+              function(student) {
+                return (
+                  String(
+                    student.className || ""
+                  ).trim() ===
+                  selectedClass
+                );
+              }
+            )
+          : students;
 
       const sheetStudentCount =
         selectedStudents.length;
@@ -10332,6 +10276,13 @@ function loadDashboard() {
             !data ||
             !data.success
           ) {
+
+            console.error(
+              "SATS getDashboard gagal:",
+              data || "Tiada respons JSONP",
+              "Tarikh:", reportDate,
+              "Kelas:", selectedClass
+            );
 
             document.getElementById(
               "totalStudents"
@@ -10447,9 +10398,10 @@ function loadDashboard() {
                   students.filter(
                     function(student) {
                       return (
-                        String(student.name || "").trim() !== "" &&
-                        String(student.className || "").trim() !== "" &&
-                        String(student.className || "").trim() === className
+                        String(
+                          student.className || ""
+                        ).trim() ===
+                        className
                       );
                     }
                   ).length;
