@@ -1,4 +1,3 @@
-```
 <!DOCTYPE html>
 <html lang="ms">
 
@@ -5243,10 +5242,9 @@ function callSATS(
 
     };
 
-  document.body.appendChild(
-    script
-  );
-
+  // Tetapkan timeout sebelum memasukkan skrip ke halaman.
+  // Ini mengelakkan callback JSONP yang sangat pantas berjalan sebelum
+  // timeoutId diwujudkan pada sesetengah pelayar mudah alih.
   const timeoutId =
     setTimeout(
       function() {
@@ -5295,6 +5293,9 @@ function callSATS(
       },
       20000
     );
+
+  // Masukkan skrip hanya selepas callback, cleanup dan timeout siap.
+  document.body.appendChild(script);
 
 }
 
@@ -11684,4 +11685,3 @@ function deleteClassSetting(
 </body>
 
 </html>
-```
