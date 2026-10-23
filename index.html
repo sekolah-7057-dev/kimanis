@@ -5189,8 +5189,10 @@ function callSATS(
   script.async =
     true;
 
-  script.referrerPolicy =
-    "no-referrer-when-downgrade";
+  // Keserasian pelayar mudah alih:
+  // Jangan tetapkan referrerPolicy secara eksplisit pada elemen JSONP.
+  // Sesetengah versi pelayar mudah alih mengendalikan permintaan skrip silang
+  // domain secara berbeza. Permintaan kekal menggunakan callback JSONP asal.
 
   script.onerror =
     function() {
